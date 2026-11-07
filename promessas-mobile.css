@@ -1,0 +1,97 @@
+/* Igreja Promessas — experiência móvel compacta, 07/11/2026.
+   Mantém identidade ouro + grafite e rostos originais dos pastores. */
+@media (max-width:760px){
+  html{scroll-padding-top:76px}
+  body{font-size:15px;line-height:1.5}
+  .wrap{padding-inline:18px!important}
+  header{position:sticky;top:0;z-index:100}
+  .nav{min-height:64px!important;padding-block:7px}
+  .brand{gap:10px!important;letter-spacing:.10em!important}
+  .brand img{height:43px!important;max-width:43px!important;width:43px!important}
+  .brand span{font-size:12px!important;line-height:1.17!important}
+  .menu{display:inline-flex!important;align-items:center;justify-content:center;width:44px;height:44px;min-width:44px;font-size:25px!important;color:#f3d59d!important}
+  .links{top:64px!important;left:0;right:0;max-height:calc(100dvh - 64px);overflow-y:auto;gap:0!important;padding:10px 20px 18px!important;background:#111114!important;border-top:1px solid #d9b47735;box-shadow:0 18px 34px #000b!important}
+  .links a{display:block;width:100%;min-height:45px;padding:12px 8px;font-size:15px!important;line-height:1.35;border-bottom:1px solid #ffffff15}
+  .links .btn{display:flex;align-items:center;justify-content:center;margin-top:9px;max-width:100%;min-height:46px}
+  .hero,.hero#inicio{margin:8px 9px 12px!important;min-height:0!important;border-radius:18px!important}
+  .hero .hero-pastors-grid,#inicio .hero-pastors-grid{display:flex!important;flex-direction:column!important;width:100%;min-height:0!important;padding:0 12px!important;gap:0!important}
+  .hero .hero-welcome{align-self:auto;text-align:center;padding:24px 4px 7px!important}
+  .hero .hero-welcome .eyebrow{font-size:10px!important;letter-spacing:.14em!important;line-height:1.5}
+  .hero .hero-welcome h1{font-size:clamp(27px,7.3vw,36px)!important;line-height:1.12!important;letter-spacing:-.035em;margin:10px auto 12px!important;max-width:360px!important;text-wrap:balance}
+  .hero .hero-welcome p{font-size:13px!important;line-height:1.5!important;max-width:310px!important;margin:0 auto!important}
+  .hero .actions{margin-top:14px!important;gap:8px!important;justify-content:center;flex-wrap:wrap}
+  .hero .actions .btn{display:inline-flex;align-items:center;justify-content:center;min-height:41px;padding:8px 13px!important;font-size:12px!important;line-height:1.2;border-radius:26px;flex:0 1 auto}
+  #inicio .hero-logo{display:none!important}
+  #inicio .hero-pastors-stage{height:238px!important;min-height:238px!important;max-height:238px!important;max-width:100%!important;align-items:end;overflow:hidden}
+  #inicio .hero-pastors-photo{width:100%;height:238px!important;min-height:0!important;align-items:end;justify-content:center}
+  #inicio .hero-pastors-photo img{display:block;flex-shrink:0;width:auto!important;height:238px!important;max-width:100%!important;max-height:238px!important;margin:0 auto!important;object-fit:contain!important;object-position:center bottom!important;opacity:.68!important;transform:none!important;animation:none!important}
+  #inicio .hero-pastors-caption{left:0!important;right:0!important;bottom:1px!important;padding:3px 5px 6px!important;justify-items:center!important;text-align:center!important;background:none!important}
+  #inicio .hero-pastors-caption strong{font:600 clamp(14px,3.8vw,17px)/1.2 Georgia,serif!important;letter-spacing:0!important;color:#f0cf94!important;text-shadow:0 2px 7px #050507,0 0 12px #050507!important}
+  .quicklinks{display:flex!important;grid-template-columns:none!important;gap:8px!important;margin:0!important;padding:5px 12px 17px!important;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .quicklinks::-webkit-scrollbar,#video-topics::-webkit-scrollbar{display:none}
+  .quicklinks a{flex:0 0 124px;min-height:70px!important;max-height:75px;scroll-snap-align:start;padding:11px 12px!important;gap:4px!important;border-radius:13px!important;justify-content:center}
+  .quicklinks i{font-size:17px!important;line-height:1!important}
+  .quicklinks strong{font-size:12px!important;line-height:1.2!important}
+  .quicklinks span{display:none!important}
+  .section{padding:36px 0!important;scroll-margin-top:70px}
+  .section h2{font-size:clamp(25px,6.5vw,32px)!important;line-height:1.14!important;margin:8px 0 13px!important}
+  .section h2::before{width:4px!important;margin-right:9px!important}
+  .section h3{font-size:21px!important;line-height:1.2!important}
+  .eyebrow{font-size:10px!important;letter-spacing:.17em!important}
+  .section p{font-size:14px;line-height:1.55}
+  .split,.pastors-layout,.pastores-layout{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:17px!important}
+  .grid{grid-template-columns:minmax(0,1fr)!important;gap:12px!important}
+  .card{border-radius:14px}.card .body{padding:17px!important}
+  .card:hover,.quicklinks a:hover,.btn:hover{transform:none!important}
+  #sobre .featureimage{display:none!important}
+  #sobre p{margin:0 0 14px}
+  .btn{min-height:44px;max-width:100%;padding:11px 16px;font-size:14px;line-height:1.3;white-space:normal;text-align:center}
+  #culto .wrap{display:flex;flex-direction:column;gap:5px}
+  #culto h2{margin-bottom:7px!important}
+  #culto p{margin:0 0 13px}
+  #culto .btn{align-self:flex-start}
+  #radio .radio{display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:16px!important}
+  #radio .radio h3{margin:5px 0 8px!important}
+  #radio .radio p{margin:0}
+  #radio .radio-player{width:100%;padding:14px}
+  .radio-player-top{gap:7px;margin-bottom:9px}
+  .radio-player-top strong{font-size:14px}
+  .radio-player audio{width:100%;height:43px}
+  #radio .radio-player-note{margin-top:8px!important;font-size:12px!important}
+  #video-topics{display:flex!important;gap:7px!important;flex-wrap:nowrap!important;margin:15px -18px 18px!important;padding:0 18px 3px!important;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  #video-topics .btn{flex:0 0 auto;min-height:37px;padding:7px 12px!important;font-size:12px!important;white-space:nowrap}
+  #video-stage{width:100%;aspect-ratio:16/9!important;padding:10px!important;min-height:0!important;border-radius:12px!important}
+  #video-stage iframe{width:100%!important;height:100%!important}
+  #video-title{font-size:18px!important;margin:12px 0 5px!important}
+  #video-caption{margin:0 0 13px}
+  #mensagens .card .body{padding:14px!important}
+  #mensagens .card h3{font-size:17px!important;margin:4px 0 10px}
+  #video-list{gap:7px!important;max-height:245px;overflow-y:auto;overscroll-behavior:contain}
+  #video-list button{padding:10px 12px!important;font-size:12px;line-height:1.45}
+  #mensagens .notice{display:none}
+  #oracao .promessas-intro p{margin-bottom:10px}
+  #oracao .promessas-contatos{grid-template-columns:minmax(0,1fr)!important;margin-top:15px;gap:12px!important}
+  #oracao .promessas-contato{padding:17px!important;border-radius:14px}
+  #oracao .promessas-contato h3{font-size:20px!important;margin:7px 0!important}
+  #oracao .promessas-contato p{font-size:13px!important;margin:7px 0!important}
+  #oracao .promessas-contato .btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;margin-top:11px}
+  #localizacao .split{gap:17px}
+  #localizacao h3{font-size:18px!important}
+  #localizacao .actions{margin-top:13px!important;gap:8px}
+  #localizacao .actions .btn{flex:1 1 130px;font-size:12px;padding:10px}
+  #localizacao iframe{height:220px!important;border-radius:14px!important}
+  footer{padding:30px 0!important}
+  footer .footergrid{display:grid;grid-template-columns:1fr!important;gap:16px}
+  footer h3{font-size:20px!important}
+  footer p{margin:7px 0;font-size:13px}
+}
+@media (max-width:359px){
+  .hero .hero-welcome h1{font-size:26px!important}
+  #inicio .hero-pastors-stage,#inicio .hero-pastors-photo,#inicio .hero-pastors-photo img{height:205px!important;max-height:205px!important;min-height:0!important}
+  #inicio .hero-pastors-caption strong{font-size:13px!important}
+  .hero .actions .btn{font-size:11px!important;padding-inline:10px!important}
+  .quicklinks a{flex-basis:114px}
+}
+@media (prefers-reduced-motion:reduce){
+  .quicklinks,#video-topics{scroll-behavior:auto}
+}
