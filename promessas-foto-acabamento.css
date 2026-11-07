@@ -1,0 +1,134 @@
+/* Acabamento original dos pastores: foto à direita no desktop,
+   rostos preservados e transição real de transparência nos ombros. */
+#inicio .hero-pastors-grid{
+  grid-template-columns:minmax(0,1.03fr) minmax(95px,.34fr) minmax(0,1.39fr)!important;
+  gap:clamp(4px,1.3vw,18px)!important;
+}
+#inicio .hero-welcome{
+  grid-column:1!important;grid-row:1!important;
+  position:relative;z-index:3;
+  text-align:left!important;align-self:center!important;
+  padding:20px 2px!important;
+}
+#inicio .hero-logo{
+  grid-column:2!important;grid-row:1!important;
+  position:relative!important;inset:auto!important;
+  top:auto!important;right:auto!important;left:auto!important;
+  justify-self:center!important;
+  transform:none!important;
+  display:grid!important;opacity:.75!important;
+  width:clamp(110px,10vw,152px)!important;
+}
+#inicio .hero-pastors-stage{
+  grid-column:3!important;grid-row:1!important;
+  position:relative;z-index:2;
+  height:510px!important;min-height:0!important;
+  align-self:stretch;justify-content:end!important;align-items:end!important;
+  overflow:visible!important;
+}
+#inicio .hero-pastors-photo{
+  width:100%;height:100%;min-height:0!important;
+  display:flex;justify-content:flex-end!important;align-items:flex-end!important;
+  overflow:visible!important;
+}
+#inicio .hero-pastors-photo img{
+  display:block;width:100%!important;max-width:100%!important;
+  height:auto!important;max-height:510px!important;
+  object-fit:contain!important;object-position:center bottom!important;
+  transform:none!important;
+  opacity:.66!important;
+  filter:grayscale(1) contrast(.92) brightness(.93)!important;
+  -webkit-mask-image:
+    linear-gradient(to right,transparent 0%,rgba(0,0,0,.22) 9%,rgba(0,0,0,.72) 21%,#000 35%,#000 78%,rgba(0,0,0,.58) 88%,transparent 100%),
+    linear-gradient(to bottom,#000 0%,#000 76%,rgba(0,0,0,.77) 85%,rgba(0,0,0,.35) 92%,transparent 100%)!important;
+  mask-image:
+    linear-gradient(to right,transparent 0%,rgba(0,0,0,.22) 9%,rgba(0,0,0,.72) 21%,#000 35%,#000 78%,rgba(0,0,0,.58) 88%,transparent 100%),
+    linear-gradient(to bottom,#000 0%,#000 76%,rgba(0,0,0,.77) 85%,rgba(0,0,0,.35) 92%,transparent 100%)!important;
+  -webkit-mask-composite:source-in!important;
+  mask-composite:intersect!important;
+}
+#inicio .hero-pastors-caption{
+  left:0!important;right:0!important;bottom:14px!important;
+  text-align:center!important;justify-items:center!important;
+  background:none!important;padding:4px 3px!important;z-index:5!important;
+}
+#inicio .hero-pastors-caption strong{
+  color:#eac886!important;
+  font-size:clamp(14px,1.5vw,20px)!important;
+  text-shadow:0 2px 8px #000,0 0 13px #000!important;
+}
+#inicio .hero-welcome h1{
+  font-size:clamp(32px,3.7vw,52px)!important;
+  max-width:500px!important;line-height:1.10!important;
+}
+#inicio .hero-welcome p{max-width:440px!important}
+@media(min-width:761px) and (max-width:1020px){
+  #inicio .hero-pastors-grid{
+    grid-template-columns:minmax(0,1fr) minmax(68px,.28fr) minmax(0,1.26fr)!important;
+    padding-inline:20px!important;
+  }
+  #inicio .hero-pastors-stage{height:420px!important}
+  #inicio .hero-pastors-photo img{max-height:430px!important}
+  #inicio .hero-welcome h1{font-size:clamp(26px,3.5vw,38px)!important}
+  #inicio .hero-logo{width:84px!important}
+}
+@media(max-width:760px){
+  #inicio.hero{min-height:0!important}
+  #inicio .hero-pastors-grid{
+    display:flex!important;flex-direction:column!important;
+    padding:15px 12px 5px!important;gap:0!important;min-height:0!important;
+  }
+  #inicio .hero-welcome{
+    order:0;align-self:stretch!important;
+    text-align:center!important;padding:8px 4px 0!important;
+  }
+  #inicio .hero-welcome h1{
+    font-size:clamp(27px,7.8vw,34px)!important;
+    line-height:1.10!important;max-width:365px!important;
+    margin:9px auto 10px!important;
+  }
+  #inicio .hero-welcome .eyebrow{font-size:9px!important;letter-spacing:.12em!important}
+  #inicio .hero-welcome p{
+    font-size:12px!important;line-height:1.45!important;
+    max-width:320px!important;margin:0 auto!important;
+  }
+  #inicio .hero-welcome .actions{
+    justify-content:center!important;gap:8px!important;margin-top:12px!important;
+  }
+  #inicio .hero-welcome .actions .btn{
+    min-height:36px!important;padding:7px 10px!important;font-size:11px!important;
+  }
+  #inicio .hero-logo{
+    position:absolute!important;top:51%!important;left:50%!important;
+    right:auto!important;width:115px!important;
+    opacity:.19!important;z-index:0!important;pointer-events:none!important;
+    transform:translate(-50%,-50%)!important;
+  }
+  #inicio .hero-pastors-stage{
+    order:1;align-self:stretch!important;
+    width:100%!important;max-width:100%!important;
+    height:270px!important;min-height:270px!important;max-height:270px!important;
+    justify-content:flex-end!important;align-items:flex-end!important;
+    overflow:visible!important;
+  }
+  #inicio .hero-pastors-photo{height:270px!important;min-height:0!important;justify-content:flex-end!important}
+  #inicio .hero-pastors-photo img{
+    width:auto!important;max-width:100%!important;
+    height:270px!important;max-height:270px!important;
+    transform:none!important;opacity:.66!important;
+  }
+  #inicio .hero-pastors-caption{
+    left:0!important;right:0!important;bottom:3px!important;
+    text-align:center!important;justify-items:center!important;
+    padding:4px 0!important;
+  }
+  #inicio .hero-pastors-caption strong{font-size:clamp(13px,3.4vw,16px)!important}
+}
+@media(max-width:360px){
+  #inicio .hero-welcome h1{font-size:27px!important}
+  #inicio .hero-pastors-stage,#inicio .hero-pastors-photo{height:242px!important;min-height:242px!important;max-height:242px!important}
+  #inicio .hero-pastors-photo img{height:242px!important;max-height:242px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  #inicio .hero-logo,#inicio .hero-logo:before,#inicio .hero-logo:after{animation:none!important}
+}
