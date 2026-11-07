@@ -88,3 +88,14 @@ body::before{content:"";position:fixed;z-index:-1;inset:0;pointer-events:none;ba
 @media(prefers-reduced-motion:reduce){
  body::before,.quicklinks a,.quicklinks a::before,.video-placeholder .placeholder-logo,#video-stage:has(.video-placeholder)::before,.floating-whatsapp{animation:none!important}
 }
+
+/* Ajuste solicitado: retrato realmente discreto, bordas dissolvidas (07/11/2026) */
+#inicio .hero-pastors-photo img{
+  opacity:.30!important;
+  filter:grayscale(1) contrast(.85) brightness(.78)!important;
+  -webkit-mask-image:radial-gradient(ellipse 65% 77% at 50% 46%,#000 27%,rgba(0,0,0,.82) 46%,rgba(0,0,0,.41) 66%,rgba(0,0,0,.1) 83%,transparent 100%)!important;
+  mask-image:radial-gradient(ellipse 65% 77% at 50% 46%,#000 27%,rgba(0,0,0,.82) 46%,rgba(0,0,0,.41) 66%,rgba(0,0,0,.1) 83%,transparent 100%)!important;
+}
+@media(max-width:760px){
+  #inicio .hero-pastors-photo img{opacity:.32!important;filter:grayscale(1) contrast(.85) brightness(.80)!important}
+}
