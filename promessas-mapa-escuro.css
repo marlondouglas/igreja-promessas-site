@@ -1,0 +1,15 @@
+/* Google Maps embed: visual escuro para combinar com a identidade da igreja.
+   O embed do Google não permite definir um estilo nativo via URL;
+   o filtro CSS atua apenas na visualização, sem mudar a localização. */
+#localizacao .mapa-promessas-escuro{
+  display:block;width:100%;border:1px solid rgba(215,177,109,.3)!important;
+  border-radius:16px!important;
+  filter:grayscale(1) invert(.91) hue-rotate(180deg) contrast(.89) brightness(.78);
+  transition:filter .3s ease;
+}
+#localizacao .mapa-promessas-escuro:focus-visible{
+  outline:2px solid #e6bd79;outline-offset:3px;
+}
+@media(max-width:760px){
+ #localizacao .mapa-promessas-escuro{height:300px!important;border-radius:13px!important}
+}

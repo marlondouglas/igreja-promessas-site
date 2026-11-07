@@ -1,0 +1,141 @@
+/* Ingressos de eventos — Igreja Promessas.
+   Espaço preparado para futuros eventos com checkout InfinitePay.
+   Sem redirecionamento ou pagamento ativo enquanto não houver evento publicado. */
+#ingressos{
+ position:relative;overflow:hidden;
+ background:linear-gradient(140deg,#121419,#18171a 48%,#111318)!important;
+ border-block:1px solid rgba(229,190,119,.12);
+}
+#ingressos::before{
+ content:"";position:absolute;inset:-35% -10%;z-index:-1;
+ pointer-events:none;opacity:.5;
+ background:radial-gradient(ellipse 42% 48% at 70% 50%,rgba(203,153,79,.13),transparent 70%);
+ animation:promTicketsGlow 10s ease-in-out infinite alternate;
+}
+#ingressos .ingressos-wrap{
+ max-width:1190px;
+ display:grid;grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);
+ gap:clamp(25px,5vw,75px);align-items:center;
+}
+#ingressos .tickets-intro{max-width:540px}
+#ingressos .tickets-intro h2{
+ max-width:560px;
+ font-size:clamp(34px,3.85vw,52px)!important;
+ margin:9px 0 13px;
+ color:#fff0d6;letter-spacing:-.034em;
+}
+#ingressos .tickets-intro p{margin:0 0 18px;max-width:46ch;color:#cbbfb0;line-height:1.6}
+#ingressos .tickets-intro .tickets-link{
+ min-height:44px;font-size:13px;padding:11px 17px;
+}
+#ingressos .ticket-visual{
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(115px,.34fr);
+ min-height:220px;position:relative;isolation:isolate;
+ overflow:hidden;
+ border:1px solid rgba(241,206,147,.66);
+ border-radius:22px;
+ background:radial-gradient(circle at 76% 23%,rgba(237,195,117,.14),transparent 42%),
+ linear-gradient(137deg,#2d271f,#18191e 66%,#111318);
+ box-shadow:inset 0 1px rgba(253,228,179,.16),0 24px 60px rgba(0,0,0,.42);
+ animation:ticketEnter .85s cubic-bezier(.2,.8,.2,1) both;
+}
+#ingressos .ticket-visual::before{
+ content:"";position:absolute;inset:-65%;z-index:0;pointer-events:none;
+ background:linear-gradient(118deg,transparent 43%,rgba(252,219,161,.095) 51%,transparent 60%);
+ transform:translateX(-75%) rotate(-9deg);
+ animation:ticketGlint 9s ease-in-out infinite;
+}
+#ingressos .ticket-main{
+ padding:clamp(22px,2.7vw,33px);
+ min-width:0;position:relative;z-index:1;
+ display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:15px;
+}
+#ingressos .ticket-topline{display:flex;align-items:center;gap:11px}
+#ingressos .ticket-icon{
+ width:44px;height:44px;display:grid;place-items:center;
+ border-radius:13px;border:1px solid #eac88a6e;
+ background:#c49a5140;color:#f4d49c;
+}
+#ingressos .ticket-icon svg{
+ width:23px;height:23px;stroke:currentColor;
+ fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;
+}
+#ingressos .ticket-meta{display:flex;flex-direction:column;gap:3px}
+#ingressos .ticket-meta strong{font-size:12px;color:#f6e4c6;letter-spacing:.13em}
+#ingressos .ticket-meta span{font-size:11px;color:#c3ac86}
+#ingressos .ticket-title{
+ margin:0;font:600 clamp(27px,3vw,42px)/1.12 Georgia,serif;
+ color:#f4d49f;letter-spacing:-.025em;
+}
+#ingressos .ticket-description{margin:0;font-size:13px;color:#d5c4aa}
+#ingressos .ticket-stub{
+ position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:16px;min-width:0;border-left:1px dashed rgba(250,210,149,.5);
+ background:linear-gradient(105deg,rgba(196,144,64,.085),rgba(179,126,53,.13));
+}
+#ingressos .ticket-stub::before,#ingressos .ticket-stub::after{
+ content:"";position:absolute;left:-12px;width:24px;height:24px;border-radius:50%;
+ background:#121419;border:1px solid #b9955d5c;
+}
+#ingressos .ticket-stub::before{top:-13px}
+#ingressos .ticket-stub::after{bottom:-13px}
+#ingressos .ticket-stub-label{
+ writing-mode:vertical-rl;transform:rotate(180deg);
+ font-weight:850;font-size:13px;letter-spacing:.27em;color:#f2d198;
+ text-transform:uppercase;
+}
+#ingressos .ticket-stub svg{width:26px;height:26px;stroke:#d9b478;stroke-width:1.6;fill:none}
+#ingressos .tickets-notice{
+ display:inline-flex;align-items:center;gap:9px;min-height:33px;padding:6px 11px;
+ color:#f5d79d;border:1px solid rgba(237,198,130,.3);
+ background:rgba(210,151,65,.1);border-radius:999px;
+ font-size:11px;font-weight:750;letter-spacing:.10em;text-transform:uppercase;
+}
+#ingressos .tickets-notice::before{
+ content:"";width:6px;height:6px;border-radius:50%;background:#e1bc7a;
+ box-shadow:0 0 9px #e0b96b55;
+}
+@keyframes ticketGlint{
+ 0%,62%,100%{transform:translateX(-75%) rotate(-9deg)}
+ 83%{transform:translateX(75%) rotate(-9deg)}
+}
+@keyframes ticketEnter{
+ from{opacity:.45;transform:translateY(17px)}
+ to{opacity:1;transform:translateY(0)}
+}
+@keyframes promTicketsGlow{
+ from{transform:translateX(-2%);opacity:.33}
+ to{transform:translateX(2%);opacity:.65}
+}
+@media(max-width:900px){
+ #ingressos .ingressos-wrap{grid-template-columns:1fr;gap:24px}
+ #ingressos .ticket-visual{max-width:640px;width:100%;min-height:195px}
+}
+@media(max-width:760px){
+ #ingressos{padding-block:40px!important}
+ #ingressos .ingressos-wrap{gap:20px}
+ #ingressos .tickets-intro h2{font-size:29px!important}
+ #ingressos .tickets-intro p{font-size:14px;max-width:40ch}
+ #ingressos .ticket-visual{
+  min-height:182px;grid-template-columns:minmax(0,1fr) 78px;border-radius:17px;
+ }
+ #ingressos .ticket-main{padding:18px 16px;gap:10px}
+ #ingressos .ticket-title{font-size:clamp(25px,7vw,33px)}
+ #ingressos .ticket-icon{height:38px;width:38px;border-radius:11px}
+ #ingressos .ticket-icon svg{width:21px;height:21px}
+ #ingressos .ticket-meta strong{font-size:10px}
+ #ingressos .ticket-meta span{font-size:10px}
+ #ingressos .ticket-description{font-size:12px;line-height:1.35}
+ #ingressos .ticket-stub-label{font-size:10px;letter-spacing:.20em}
+ #ingressos .ticket-stub svg{width:23px;height:23px}
+}
+@media(max-width:360px){
+ #ingressos .ticket-visual{grid-template-columns:minmax(0,1fr) 61px}
+ #ingressos .ticket-main{padding:14px 12px}
+ #ingressos .ticket-stub-label{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){
+ #ingressos::before,#ingressos .ticket-visual,#ingressos .ticket-visual::before{
+  animation:none!important;transition:none!important
+ }
+}

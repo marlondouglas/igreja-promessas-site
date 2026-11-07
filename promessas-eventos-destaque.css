@@ -1,0 +1,64 @@
+/* Eventos da Igreja Promessas — destaque de agenda, oculto quando não houver eventos. */
+#eventos-destaque{
+ background:radial-gradient(ellipse at 20% 90%,rgba(212,161,80,.11),transparent 60%),linear-gradient(145deg,#101116,#1b191a)!important;
+ border-block:1px solid rgba(218,179,103,.23);padding-block:clamp(35px,5vw,64px)!important;
+}
+#eventos-destaque[hidden]{display:none!important}
+#eventos-destaque .evento-destaque-grid{
+ display:grid;grid-template-columns:minmax(0,1.1fr) minmax(230px,.65fr);
+ max-width:1100px;align-items:center;gap:clamp(18px,5vw,55px)
+}
+#eventos-destaque .evento-kicker{
+ font-weight:850;text-transform:uppercase;letter-spacing:.18em;font-size:11px;
+ color:#d9b579
+}
+#eventos-destaque .evento-destaque-copy h2{
+ font:600 clamp(33px,4vw,52px)/1.08 Georgia,serif;
+ margin:10px 0;color:#fff3dc
+}
+#eventos-destaque .evento-destaque-copy p{color:#cfbfac;max-width:48ch;line-height:1.62;margin:12px 0}
+#eventos-destaque .evento-infos{display:grid;gap:9px;margin:17px 0 20px}
+#eventos-destaque .evento-info{
+ display:flex;align-items:center;gap:10px;color:#e7d4b7;font-size:14px;
+}
+#eventos-destaque .evento-info svg{width:19px;height:19px;stroke:#e6c58d;fill:none;stroke-width:1.7;flex:none}
+#eventos-destaque .evento-info strong{color:#f7deb4}
+#eventos-destaque .evento-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+#eventos-destaque .evento-actions .btn{min-height:43px;padding:10px 16px}
+#eventos-destaque .evento-art{
+ display:block;justify-self:center;position:relative;overflow:hidden;
+ border:1px solid rgba(230,190,114,.61);border-radius:18px;
+ width:100%;max-width:350px;background:#18191c;
+ box-shadow:0 22px 65px #0009,0 0 30px #e4b45a12;
+}
+#eventos-destaque .evento-art:before{
+ content:"";position:absolute;inset:-100%;background:linear-gradient(115deg,transparent 45%,#f1d9a21d 50%,transparent 56%);
+ pointer-events:none;animation:eventoShine 9s ease-in-out infinite;z-index:1;
+}
+#eventos-destaque .evento-art img{display:block;width:100%;height:auto;object-fit:contain}
+#eventos-destaque .evento-art figcaption{
+ position:absolute;bottom:9px;left:9px;right:9px;
+ background:rgba(14,15,19,.76);border:1px solid #e6c27a40;
+ padding:6px 9px;border-radius:7px;
+ color:#f3dba8;font-size:10px;text-align:center;letter-spacing:.05em;
+ backdrop-filter:blur(7px)
+}
+@keyframes eventoShine{0%,60%,100%{transform:translateX(-72%) rotate(-8deg)}82%{transform:translateX(72%) rotate(-8deg)}}
+@media(max-width:760px){
+ #eventos-destaque .evento-destaque-grid{grid-template-columns:1fr;gap:21px}
+ #eventos-destaque .evento-destaque-copy h2{font-size:30px}
+ #eventos-destaque .evento-destaque-copy p{font-size:13px}
+ #eventos-destaque .evento-info{font-size:12px}
+ #eventos-destaque .evento-art{max-width:300px}
+ #eventos-destaque .evento-actions{margin-top:15px}
+}
+@media(prefers-reduced-motion:reduce){#eventos-destaque .evento-art:before{animation:none}}
+
+#eventos-destaque .evento-art figcaption{display:none}
+
+
+#eventos-destaque .evento-reminder{margin-top:15px;display:flex;flex-direction:column;align-items:flex-start;gap:7px}
+#eventos-destaque .evento-lembrete{background:linear-gradient(125deg,#1c693f,#16804a)!important;color:#fff!important;border:1px solid #79d5a16c!important;padding:11px 17px!important;min-height:45px;box-shadow:0 7px 24px #07844921!important;font-size:13px;font-weight:750;display:inline-flex;gap:9px;align-items:center}
+#eventos-destaque .evento-lembrete:hover{background:linear-gradient(125deg,#1f8050,#169653)!important;transform:translateY(-2px)}
+#eventos-destaque .evento-reminder-caption{color:#b5aa9d;font-size:11px;line-height:1.5;max-width:42ch;margin:0}
+@media(max-width:760px){#eventos-destaque .evento-reminder{margin-top:14px}#eventos-destaque .evento-lembrete{font-size:12px;min-height:43px;padding:10px 13px!important}}
