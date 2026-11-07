@@ -1,0 +1,64 @@
+/* Teste local — programação compacta à esquerda + mini player à direita. */
+.home-live{position:relative;overflow:hidden;padding:31px 0!important;background:radial-gradient(ellipse at 4% 85%,rgba(186,129,49,.08),transparent 55%),linear-gradient(125deg,#151416,#111114)!important;border-block:1px solid rgba(206,164,94,.24);scroll-margin-top:80px}
+.home-live::before{content:"";position:absolute;width:420px;height:420px;right:-160px;top:-170px;border:1px solid #dab8781e;border-radius:50%;box-shadow:0 0 0 54px #dab87809,0 0 0 120px #dab87805;pointer-events:none;animation:homeLiveHalo 12s ease-in-out infinite alternate}
+.home-live .home-live-grid{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.45fr) minmax(260px,.85fr);align-items:stretch;gap:clamp(14px,2.5vw,32px);max-width:1200px;margin:0 auto}
+.home-schedule{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:14px}
+.home-schedule-head .eyebrow{display:block;font-size:11px;letter-spacing:.16em;color:#e0bd7d}
+.home-schedule-head h2{font:600 clamp(24px,2.6vw,32px)/1.1 Georgia,serif;margin:6px 0 0;color:#f6e5c9}
+.home-schedule-items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.home-culto-item{position:relative;min-width:0;min-height:79px;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:12px 14px;border:1px solid rgba(224,185,114,.29);border-radius:14px;background:linear-gradient(135deg,#231e18,#151517);overflow:hidden;transition:transform .24s,border-color .24s;animation:homeCardIn .65s ease-out both}
+.home-culto-item:nth-child(2){animation-delay:.1s}.home-culto-item:nth-child(3){animation-delay:.2s}.home-culto-item:nth-child(4){animation-delay:.3s}
+.home-culto-item::before{content:"";position:absolute;left:-40%;top:0;bottom:0;width:35%;background:linear-gradient(90deg,transparent,rgba(250,211,137,.08),transparent);transform:skewX(-15deg);animation:homeCardGlint 9s ease-in-out infinite}
+.home-culto-item:nth-child(2)::before{animation-delay:1.4s}.home-culto-item:nth-child(3)::before{animation-delay:2.8s}.home-culto-item:nth-child(4)::before{animation-delay:4.2s}
+.home-culto-item:hover{border-color:#e6be77a0;transform:translateY(-2px)}
+.home-culto-day{color:#c2a270;text-transform:uppercase;font-size:10px;font-weight:800;letter-spacing:.11em}
+.home-culto-line{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.home-culto-title{font-size:clamp(12px,1.2vw,16px);font-weight:650;color:#f9f0e4;line-height:1.2}
+.home-culto-time{flex-shrink:0;font-size:clamp(13px,1.35vw,17px);font-weight:800;color:#f0d292;font-variant-numeric:tabular-nums}
+.home-schedule-note{font-size:11px!important;color:#9d9389!important;margin:0!important}
+#radio.home-radio{display:flex;flex-direction:column;justify-content:space-between;position:relative;isolation:isolate;overflow:hidden;min-height:254px;padding:19px 21px!important;border:1px solid #cfa96871;border-radius:21px;background:linear-gradient(145deg,#25211c,#151618 75%)!important;box-shadow:0 15px 38px #0008, inset 0 1px #f6d28f22;scroll-margin-top:82px}
+#radio.home-radio::before{content:"";position:absolute;z-index:-1;inset:0;background:radial-gradient(circle at 70% 28%,rgba(230,184,97,.10),transparent 52%);pointer-events:none}
+.home-radio-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.home-radio-head h2{margin:0!important;font:600 clamp(20px,2vw,27px)/1.15 Georgia,serif!important;color:#f6e1b9}
+.home-radio-live{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:850;letter-spacing:.1em;color:#f3d39b;white-space:nowrap}
+.home-radio-live::before{content:"";width:7px;height:7px;border-radius:50%;background:#f45c62;box-shadow:0 0 10px #f45c62aa;animation:homeLiveDot 2.5s ease-in-out infinite}
+.home-player-art{display:flex;align-items:center;justify-content:center;gap:14px;padding:7px 0 1px;min-height:54px}
+.home-radio-icon{display:grid;place-items:center;width:51px;height:51px;flex-shrink:0;border:1px solid #edc78370;border-radius:15px;background:linear-gradient(155deg,#5e4b2e,#24201b);color:#f0cf96;box-shadow:0 0 28px #dfb76724}
+.home-radio-icon svg{width:29px;height:29px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
+.home-radio-wave{display:flex;align-items:center;justify-content:center;gap:4px;height:34px}
+.home-radio-wave i{width:4px;height:11px;border-radius:10px;background:linear-gradient(#fbe1a8,#ac854a);opacity:.55;transform-origin:center}
+.home-radio-wave i:nth-child(2){height:22px}.home-radio-wave i:nth-child(3){height:15px}.home-radio-wave i:nth-child(4){height:29px}.home-radio-wave i:nth-child(5){height:17px}.home-radio-wave i:nth-child(6){height:25px}.home-radio-wave i:nth-child(7){height:12px}
+.home-radio.is-playing .home-radio-wave i{opacity:1;animation:homeRadioEQ 1.1s ease-in-out infinite alternate}
+.home-radio.is-playing .home-radio-wave i:nth-child(2){animation-delay:.14s}.home-radio.is-playing .home-radio-wave i:nth-child(3){animation-delay:.3s}.home-radio.is-playing .home-radio-wave i:nth-child(4){animation-delay:.2s}.home-radio.is-playing .home-radio-wave i:nth-child(5){animation-delay:.45s}.home-radio.is-playing .home-radio-wave i:nth-child(6){animation-delay:.08s}.home-radio.is-playing .home-radio-wave i:nth-child(7){animation-delay:.38s}
+#radio .home-radio-controls{display:grid;gap:7px;width:100%}
+#radio audio{display:block!important;width:100%;height:37px!important;margin:0;min-width:0}
+#radio #radio-start{margin:0!important;width:100%;min-height:37px;padding:7px 9px;font-size:12px;border-radius:12px}
+#radio #radio-play-status{font-size:10px!important;text-align:center;line-height:1.3;margin:0!important;color:#afa79b}
+@keyframes homeRadioEQ{from{transform:scaleY(.35)}to{transform:scaleY(1.1)}}
+@keyframes homeCardIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes homeCardGlint{0%,65%,100%{left:-40%}80%{left:130%}}
+@keyframes homeLiveHalo{to{transform:translate(12px,14px);opacity:.5}}
+@keyframes homeLiveDot{50%{box-shadow:0 0 0 4px #f45c621f,0 0 14px #f45c62}}
+@media(max-width:760px){
+ .home-live{padding:20px 0!important}
+ .home-live .home-live-grid{grid-template-columns:1fr!important;gap:13px}
+ .home-schedule{gap:10px}
+ .home-schedule-head h2{font-size:25px!important;margin-top:4px}
+ .home-schedule-items{gap:7px}
+ .home-culto-item{min-height:74px;padding:10px 10px;border-radius:12px}
+ .home-culto-day{font-size:9px}
+ .home-culto-line{gap:5px;flex-wrap:wrap}
+ .home-culto-title{font-size:12px;flex:1 1 auto}
+ .home-culto-time{font-size:13px}
+ .home-schedule-note{font-size:10px!important}
+ #radio.home-radio{min-height:0;padding:15px 17px!important;gap:10px;border-radius:17px}
+ .home-radio-head h2{font-size:22px!important}
+ .home-player-art{min-height:43px;padding:0}
+ .home-radio-icon{width:42px;height:42px;border-radius:12px}
+ .home-radio-icon svg{width:24px;height:24px}
+ .home-radio-wave{height:24px}
+ #radio audio{height:35px!important}
+ #radio #radio-start{min-height:37px;font-size:12px}
+}
+@media(max-width:350px){.home-culto-line{display:block}.home-culto-time{display:block;margin-top:3px}}
+@media(prefers-reduced-motion:reduce){.home-live::before,.home-culto-item,.home-culto-item::before,.home-radio-live::before,.home-radio.is-playing .home-radio-wave i{animation:none!important}}
