@@ -28,3 +28,7 @@ html.promessas-native-app .nav-download,html.promessas-native-app .hero-download
 html.promessas-native-app .app-native-site-link{color:#f0cc8d!important;font-weight:800}
 @media(max-width:750px){.devocional-feature{padding:55px 0!important}.devocional-feature-grid{grid-template-columns:1fr;gap:40px}.devocional-feature h2{font-size:39px}.devocional-feature .dev-cover{max-width:270px}.devocional-feature .dev-cover .cover-middle img{height:75px;width:75px}}
 @media(prefers-reduced-motion:reduce){.devocional-feature .dev-cover:after,.devocional-feature .dev-cover .cover-middle img{animation:none}}
+
+.radio-studio-link{display:inline-flex;align-items:center;justify-content:center;text-align:center;margin:11px auto 0;padding:9px 13px;color:#f5d99c!important;border:1px solid #d8b57869;border-radius:8px;background:linear-gradient(105deg,#d2a05d22,#1c1916);font-size:12px;font-weight:800;line-height:1.5;transition:transform .2s}
+.radio-studio-link:hover{transform:translateY(-2px);background:#d3a75b2c}
+@media(min-width:981px) and (max-width:1350px){.links{gap:clamp(4px,.8vw,10px)}.links>a:not(.btn){font-size:10.5px}}
