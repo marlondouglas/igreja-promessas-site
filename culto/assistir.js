@@ -15,7 +15,7 @@
   const local=new URLSearchParams(location.search).get("teste")==="notebook";
   const ua=navigator.userAgent||"";
   const apple=/iPad|iPhone|iPod/i.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)||(/Safari/.test(ua)&&!/Chrome|CriOS|Edg|FxiOS/.test(ua));
-  let endpoint=null,active=false,hls=null,video=null,checking=false,misses=0;
+  let endpoint=null,preferredEndpoint=null,active=false,hls=null,video=null,checking=false,misses=0;
   let watchdog=0,startedAt=0,lastProgressAt=0,lastTime=-1,hasFrames=false,mode="none",loadNumber=0;
   let codecWarning="";
   function valid(value){
@@ -24,7 +24,7 @@
       const u=new URL(value);
       if(u.username||u.password||u.search||u.hash)return null;
       if(u.protocol!=="https:"&&!(local&&u.protocol==="http:"&&["localhost","127.0.0.1"].includes(u.hostname)))return null;
-      if(!u.pathname.endsWith("/culto"))return null;
+      if(!/\/culto(?:-aac)?$/.test(u.pathname))return null;
       return u;
     }catch(_){return null;}
   }
@@ -207,29 +207,57 @@
     active=false;loadNumber++;
     destroy();stage.hidden=true;waiting.hidden=false;status("waiting");
   }
+  async function fetchManifest(target,signal){
+    if(!target)return null;
+    const response=await fetch(target.origin+target.pathname+"/index.m3u8",{cache:"no-store",signal});
+    if(!response.ok)return null;
+    const manifest=await response.text();
+    if(!manifest.trimStart().startsWith("#EXTM3U")||
+       !(manifest.includes("#EXTINF")||manifest.includes("#EXT-X-STREAM-INF")||manifest.includes("#EXT-X-MAP")))return null;
+    return {target,manifest,codecs:(manifest.match(/CODECS\s*=\s*["'][^"']+["']/gi)||[]).join(" ").toLowerCase()};
+  }
   async function check(){
     if(!endpoint||checking)return;
     checking=true;
     const controller=new AbortController();
-    const timer=setTimeout(()=>controller.abort(),7000);
+    const timer=setTimeout(()=>controller.abort(),7500);
     try{
-      const response=await fetch(endpoint.origin+endpoint.pathname+"/index.m3u8",{cache:"no-store",signal:controller.signal});
-      const manifest=response.ok?await response.text():"";
-      const codecs=(manifest.match(/CODECS\s*=\s*["'][^"']+["']/gi)||[]).join(" ").toLowerCase();
-      codecWarning=codecs.includes("opus")
-        ?"O sinal HLS anuncia áudio Opus. O iPhone pode exigir AAC; é preciso adequar o áudio no servidor de transmissão."
-        :/vp09|vp8|av01/.test(codecs)
-          ?"O sinal HLS anuncia um codec de vídeo que pode não ser compatível com este aparelho. Verifique o envio H.264/AAC."
-          :"";
-      if(manifest.trimStart().startsWith("#EXTM3U")&&(manifest.includes("#EXTINF")||manifest.includes("#EXT-X-STREAM-INF")||manifest.includes("#EXT-X-MAP"))){
-        misses=0;show();
+      let selected=null;
+      if(preferredEndpoint){
+        try{
+          const candidate=await fetchManifest(preferredEndpoint,controller.signal);
+          // Never switch the public stream until the relay explicitly advertises AAC and H.264.
+          if(candidate&&candidate.codecs.includes("mp4a.40")&&candidate.codecs.includes("avc1.")){
+            selected=candidate;
+          }
+        }catch(_){/* The optional AAC relay may not be running yet. */}
+      }
+      if(!selected){
+        selected=await fetchManifest(endpoint.pathname.endsWith("/culto-aac")
+          ?valid((local?"http://127.0.0.1:8888":"https://marlon-tiffany.tail7759a9.ts.net")+"/culto")
+          :endpoint,controller.signal);
+      }
+      if(selected){
+        const previous=endpoint.href;
+        endpoint=selected.target;
+        codecWarning=selected.codecs.includes("opus")
+          ?"O sinal HLS anuncia áudio Opus. O iPhone pode exigir AAC; é preciso adequar o áudio no servidor de transmissão."
+          :/vp09|vp8|av01/.test(selected.codecs)
+            ?"O sinal anuncia um codec de vídeo incompatível. Verifique o envio H.264/AAC."
+            :"";
+        misses=0;
+        if(!active)show();
+        else if(previous!==endpoint.href)startVideo();
       }else if(++misses>=3)hide();
     }catch(_){if(++misses>=3)hide();}
     finally{clearTimeout(timer);checking=false;}
   }
   async function boot(){
     status("waiting");
-    if(local)endpoint=valid("http://127.0.0.1:8888/culto");
+    if(local){
+      endpoint=valid("http://127.0.0.1:8888/culto");
+      preferredEndpoint=valid("http://127.0.0.1:8888/culto-aac");
+    }
     else{
       try{
         const response=await fetch("/culto/stream-config.json",{cache:"no-store"});
@@ -237,6 +265,7 @@
         const config=await response.json();
         if(config.enabled!==true)return;
         endpoint=valid(config.hlsPageUrl);
+        preferredEndpoint=valid(config.hlsCompatiblePageUrl);
         if(["horizontal","vertical"].includes(config.format))holder.dataset.format=config.format;
       }catch(_){return;}
     }
