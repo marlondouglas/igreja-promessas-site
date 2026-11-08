@@ -1,7 +1,8 @@
 "use strict";
-/* Igreja Promessas — player público HLS. A playlist existir não garante imagem:
-   só marcar NO AR após o navegador receber um quadro decodificado.
-   O estúdio/publicação WHIP não é alterado por este visualizador. */
+/* Igreja Promessas — player público HLS.
+ * iOS: use reprodução HLS nativa; demais navegadores: hls.js com recuperação.
+ * O selo NO AR só aparece após o início de quadros de vídeo, não após obter a playlist.
+ */
 (()=>{
   const isHome=!!document.getElementById("home-live-holder");
   const holder=document.getElementById(isHome?"home-live-holder":"watch-holder");
@@ -11,20 +12,11 @@
   const label=document.getElementById(isHome?"home-live-badge":"watch-status");
   const note=document.getElementById("video-disclaimer");
   const nav=document.getElementById("nav-live-dot");
-  const query=new URLSearchParams(location.search);
-  const local=query.get("teste")==="notebook";
-  let endpoint=null,active=false,confirmed=false,hls=null,video=null,checking=false,misses=0;
-  let watchdog=null,attempt=0,started=0,lastFrame=0,lastPosition=-1,mode="",modesTried=new Set();
-  const style=document.createElement("style");
-  style.textContent=[
-    ".live-load-hint{position:absolute;z-index:4;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:22px;background:linear-gradient(145deg,#10131cde,#12141fd9);color:#fff0d5;font:700 14px/1.55 system-ui,sans-serif;pointer-events:none}",
-    ".live-load-hint[hidden],.live-recovery[hidden],.live-play-overlay[hidden]{display:none!important}",
-    ".live-load-hint span{display:block;max-width:340px}",
-    ".live-recovery{position:absolute;z-index:6;bottom:10px;left:10px;right:10px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;padding:8px;border-radius:12px;background:#111724e8;color:#fff1d8;font:600 12px system-ui,sans-serif}",
-    ".live-recovery a,.live-recovery button{border:1px solid #d7b77e;border-radius:9px;background:#2d2a2b;color:#fff2d9;padding:9px 12px;font:700 12px system-ui,sans-serif;text-decoration:none;cursor:pointer}",
-    ".live-play-overlay{position:absolute;z-index:7;bottom:18px;left:50%;transform:translateX(-50%);padding:12px 18px;border:1px solid #e4c58d;border-radius:24px;background:#181d2bf2;color:#fff0d5;font:800 13px system-ui,sans-serif;white-space:nowrap;cursor:pointer}"
-  ].join("\n");
-  document.head.appendChild(style);
+  const local=new URLSearchParams(location.search).get("teste")==="notebook";
+  const ua=navigator.userAgent||"";
+  const apple=/iPad|iPhone|iPod/i.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)||(/Safari/.test(ua)&&!/Chrome|CriOS|Edg|FxiOS/.test(ua));
+  let endpoint=null,active=false,hls=null,video=null,checking=false,misses=0;
+  let watchdog=0,startedAt=0,lastProgressAt=0,lastTime=-1,hasFrames=false,mode="none",loadNumber=0;
   function valid(value){
     if(typeof value!=="string")return null;
     try{
@@ -33,225 +25,180 @@
       if(u.protocol!=="https:"&&!(local&&u.protocol==="http:"&&["localhost","127.0.0.1"].includes(u.hostname)))return null;
       if(!u.pathname.endsWith("/culto"))return null;
       return u;
-    }catch{return null;}
+    }catch(_){return null;}
   }
-  function status(state){
-    const live=state==="live";
-    label.textContent=live?"● NO AR":state==="connecting"?"CONECTANDO VÍDEO":state==="tap"?"TOQUE PARA ASSISTIR":state==="fallback"?"PLAYER ALTERNATIVO":"AGUARDANDO CULTO";
-    label.classList.toggle("is-live",live);
-    if(nav)nav.hidden=!live;
-    document.body.classList.toggle("church-stream-live",live);
-    if(note)note.textContent=live
-      ?"Você está acompanhando o culto ao vivo. Para ouvir, toque no controle de áudio do vídeo."
-      :state==="connecting"?"A transmissão foi localizada. Estamos carregando a imagem e o áudio."
-      :state==="tap"?"O navegador bloqueou a reprodução automática. Toque no vídeo para iniciar."
-      :state==="fallback"?"A transmissão foi encontrada, mas o vídeo não carregou neste navegador. Use o player alternativo ou tente novamente."
-      :"Quando o culto começar, a transmissão aparecerá automaticamente nesta página.";
+  function status(kind){
+    if(!label)return;
+    const playing=kind==="live";
+    const text=kind==="live"?"● NO AR":kind==="connecting"?"CONECTANDO VÍDEO":
+      kind==="alternative"?"SINAL DETECTADO":kind==="failed"?"VÍDEO INDISPONÍVEL":"AGUARDANDO CULTO";
+    label.textContent=text;
+    label.classList.toggle("is-live",playing);
+    if(nav)nav.hidden=!playing;
+    document.body.classList.toggle("church-stream-live",playing);
+    if(note){
+      note.textContent=kind==="live"?
+        "Você está acompanhando o culto ao vivo. Para ouvir, use o controle de áudio do vídeo.":
+        kind==="connecting"?"Sinal ao vivo encontrado. Conectando à imagem; se necessário, toque em Assistir agora.":
+        kind==="alternative"?"O sinal foi encontrado, mas não foi possível confirmar a imagem. Use o player alternativo ou tente novamente.":
+        kind==="failed"?"O navegador não conseguiu reproduzir o sinal. Tente novamente; se persistir, verifique o formato de áudio e vídeo enviado pelo estúdio.":
+        "Quando o culto começar, a transmissão aparecerá automaticamente nesta página.";
+    }
   }
-  function clearPlayer(){
-    attempt++;
-    if(watchdog){clearInterval(watchdog);watchdog=null;}
-    if(hls){try{hls.destroy();}catch(_){}hls=null;}
-    if(video){try{video.pause();video.removeAttribute("src");video.load();}catch(_){}video=null;}
+  function stopWatchdog(){
+    if(watchdog){clearInterval(watchdog);watchdog=0;}
+  }
+  function destroy(){
+    stopWatchdog();
+    if(hls){try{hls.destroy();}catch(_){} hls=null;}
+    if(video){try{video.pause();video.removeAttribute("src");video.load();}catch(_){} video=null;}
     stage.replaceChildren();
+    mode="none";
   }
-  function showHint(message){
-    let hint=stage.querySelector(".live-load-hint");
-    if(!hint){hint=document.createElement("div");hint.className="live-load-hint";stage.appendChild(hint);}
-    hint.replaceChildren();
-    const span=document.createElement("span");
-    span.textContent=message;
-    hint.appendChild(span);
-    hint.hidden=false;
-    return hint;
+  function overlayButton(title,onClick){
+    const button=document.createElement("button");
+    button.type="button";button.className="live-play-overlay";
+    button.textContent=title;
+    button.addEventListener("click",onClick);
+    return button;
   }
-  function fallbackFrame(){
-    if(!active)return;
-    clearPlayer();
+  function linkToPlayer(){
+    const a=document.createElement("a");
+    a.href=endpoint.origin+endpoint.pathname;
+    a.target="_blank";a.rel="noopener noreferrer";
+    a.textContent="Abrir transmissão em outra janela";
+    a.style.cssText="position:absolute;z-index:7;bottom:10px;left:10px;padding:8px 12px;border-radius:10px;border:1px solid #dfbb80;background:#121823ed;color:#f3dab0;text-decoration:none;font:700 12px Arial,sans-serif";
+    return a;
+  }
+  function alternative(){
+    if(!active||!endpoint)return;
+    destroy();
     mode="iframe";
-    confirmed=false;
-    status("fallback");
+    status("alternative");
     const frame=document.createElement("iframe");
-    frame.title="Player alternativo do culto ao vivo — Igreja Ministério Promessas";
+    frame.title="Player alternativo ao vivo da Igreja Promessas";
     frame.src=endpoint.origin+endpoint.pathname+"?autoplay=true&muted=true&playsInline=true";
     frame.referrerPolicy="strict-origin-when-cross-origin";
     frame.allow="autoplay; fullscreen; picture-in-picture";
     frame.setAttribute("allowfullscreen","");
-    stage.replaceChildren(frame);
-    const recovery=document.createElement("div");
-    recovery.className="live-recovery";
-    const link=document.createElement("a");
-    link.href=endpoint.origin+endpoint.pathname;
-    link.target="_blank";
-    link.rel="noopener noreferrer";
-    link.textContent="Abrir player alternativo";
-    const retry=document.createElement("button");
-    retry.type="button";
-    retry.textContent="↻ Tentar novamente";
-    retry.addEventListener("click",()=>{modesTried.clear();startVideo();});
-    recovery.append(link,retry);
-    stage.appendChild(recovery);
+    const retry=overlayButton("↻ Tentar vídeo novamente",()=>startVideo());
+    retry.style.cssText="position:absolute;z-index:7;bottom:10px;right:10px;left:auto;transform:none;white-space:normal;max-width:48%;font-size:11px";
+    stage.replaceChildren(frame,linkToPlayer(),retry);
   }
-  function nextMode(){
-    if(!active)return;
-    const nativeSupported=!!document.createElement("video").canPlayType("application/vnd.apple.mpegurl");
-    const hlsSupported=!!(window.Hls&&window.Hls.isSupported());
-    const nativeFirst=/iPhone|iPad|iPod/.test(navigator.userAgent)||
-      (/Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
-    const candidates=nativeFirst?["native","hls"]:["hls","native"];
-    for(const next of candidates){
-      if(modesTried.has(next))continue;
-      if(next==="native"&&!nativeSupported)continue;
-      if(next==="hls"&&!hlsSupported)continue;
-      startVideo(next);
-      return;
-    }
-    fallbackFrame();
-  }
-  function startVideo(preferred){
+  function startVideo(forceHls=false){
     if(!active||!endpoint)return;
-    if(!preferred){modesTried.clear();nextMode();return;}
-    clearPlayer();
-    mode=preferred;
-    modesTried.add(preferred);
-    confirmed=false;
-    started=Date.now();
-    lastFrame=started;
-    lastPosition=-1;
+    destroy();mode="native";hasFrames=false;lastTime=-1;
     status("connecting");
-    video=document.createElement("video");
-    const current=video;
-    const token=attempt;
-    video.setAttribute("playsinline","");
-    video.setAttribute("webkit-playsinline","");
-    video.setAttribute("aria-label","Transmissão ao vivo da Igreja Promessas");
-    video.autoplay=true;
-    video.muted=true;
-    video.controls=true;
-    video.preload="auto";
-    const playButton=document.createElement("button");
-    playButton.type="button";
-    playButton.className="live-play-overlay";
-    playButton.textContent="▶ Toque para assistir";
-    playButton.hidden=true;
-    const stillCurrent=()=>active&&token===attempt&&video===current;
-    const confirmFrame=()=>{
-      if(!stillCurrent()||current.videoWidth<1||current.readyState<2)return;
-      const now=Date.now();
-      lastFrame=now;
-      if(!confirmed){
-        confirmed=true;
-        status("live");
-        const hint=stage.querySelector(".live-load-hint");
-        if(hint)hint.hidden=true;
-      }
-    };
-    if(typeof current.requestVideoFrameCallback==="function"){
-      const onFrame=()=>{
-        if(!stillCurrent())return;
-        confirmFrame();
-        current.requestVideoFrameCallback(onFrame);
-      };
-      current.requestVideoFrameCallback(onFrame);
-    }
-    current.addEventListener("loadeddata",confirmFrame);
-    current.addEventListener("timeupdate",()=>{
-      if(!stillCurrent())return;
-      if(current.currentTime!==lastPosition){
-        lastPosition=current.currentTime;
-        confirmFrame();
-      }
-    });
-    current.addEventListener("playing",()=>{
-      if(!stillCurrent())return;
-      playButton.hidden=true;
-      confirmFrame();
-    });
-    current.addEventListener("error",()=>{if(stillCurrent())nextMode();},{once:true});
-    playButton.addEventListener("click",()=>{
-      if(!stillCurrent())return;
-      current.muted=false;
-      current.play().then(()=>{if(stillCurrent())playButton.hidden=true;}).catch(()=>{
-        if(stillCurrent()){playButton.hidden=false;status("tap");}
-      });
-    });
-    const tryPlay=()=>{
-      if(!stillCurrent())return;
-      current.play().catch(()=>{
-        if(stillCurrent()){playButton.hidden=false;status("tap");}
-      });
-    };
-    stage.replaceChildren(current,playButton);
-    showHint("Conectando à transmissão da Igreja Promessas…");
+    const ticket=++loadNumber;
+    startedAt=Date.now();lastProgressAt=startedAt;
     const url=endpoint.origin+endpoint.pathname+"/index.m3u8";
-    try{
-      if(preferred==="hls"){
-        hls=new window.Hls({
-          enableWorker:true,lowLatencyMode:false,
-          liveSyncDuration:8,liveMaxLatencyDuration:18,
-          maxBufferLength:24,backBufferLength:20,
-          capLevelToPlayerSize:true,autoStartLoad:true
-        });
-        const player=hls;
-        player.on(window.Hls.Events.ERROR,(_event,data)=>{
-          if(!stillCurrent()||!data.fatal)return;
-          nextMode();
-        });
-        player.on(window.Hls.Events.MANIFEST_PARSED,tryPlay);
-        player.attachMedia(current);
-        player.loadSource(url);
-      }else{
-        current.src=url;
-        current.addEventListener("loadedmetadata",tryPlay,{once:true});
-        tryPlay();
+    const el=document.createElement("video");video=el;
+    el.autoplay=true;el.muted=true;el.controls=true;el.preload="auto";
+    el.setAttribute("playsinline","");el.setAttribute("webkit-playsinline","");
+    el.setAttribute("aria-label","Transmissão ao vivo da Igreja Promessas");
+    const manual=overlayButton("▶ Assistir agora",()=>{
+      if(ticket!==loadNumber||!active)return;
+      el.muted=false;
+      el.play().then(()=>{}).catch(()=>{manual.hidden=false;});
+    });
+    const hint=document.createElement("span");
+    hint.textContent="Conectando ao vídeo do culto…";
+    hint.style.cssText="pointer-events:none;position:absolute;top:12px;left:12px;z-index:5;padding:7px 10px;border-radius:8px;color:#f9ecd6;background:#141821d9;font:700 12px Arial,sans-serif";
+    stage.replaceChildren(el,hint,manual);
+    function frameReady(){
+      if(ticket!==loadNumber||!active||!el.videoWidth||!el.videoHeight)return;
+      hasFrames=true;lastProgressAt=Date.now();
+      hint.hidden=true;manual.hidden=true;status("live");
+    }
+    if(typeof el.requestVideoFrameCallback==="function"){
+      const watchFrame=()=>{
+        if(ticket!==loadNumber||!active||video!==el)return;
+        frameReady();
+        el.requestVideoFrameCallback(watchFrame);
+      };
+      el.requestVideoFrameCallback(watchFrame);
+    }
+    el.addEventListener("timeupdate",()=>{
+      if(el.currentTime>lastTime+.08){
+        lastTime=el.currentTime;
+        lastProgressAt=Date.now();
+        if(typeof el.requestVideoFrameCallback!=="function"&&el.videoWidth>0)frameReady();
       }
-    }catch(_){if(stillCurrent())nextMode();return;}
-    // A playlist may exist while the video is black. Switch player after a real timeout.
+    });
+    const autoPlay=()=>{
+      if(ticket!==loadNumber||!active)return;
+      el.play().catch(()=>{manual.hidden=false;});
+    };
+    el.addEventListener("playing",()=>{if(el.videoWidth>0&&typeof el.requestVideoFrameCallback!=="function")frameReady();});
+    el.addEventListener("loadeddata",autoPlay,{once:true});
+    el.addEventListener("error",()=>{if(ticket===loadNumber&&active)nextPlayback();},{once:true});
+    let recoveries=0;
+    function nextPlayback(){
+      if(ticket!==loadNumber||!active)return;
+      if(mode==="native"&&window.Hls&&window.Hls.isSupported()){
+        startVideo(true);
+      }else{
+        alternative();
+      }
+    }
+    const useNative=!forceHls&&apple&&!!el.canPlayType("application/vnd.apple.mpegurl");
+    if(useNative){
+      mode="native";el.src=url;el.load();autoPlay();
+    }else if(window.Hls&&window.Hls.isSupported()){
+      mode="hls";
+      hls=new window.Hls({
+        enableWorker:true,lowLatencyMode:false,
+        liveSyncDuration:8,liveMaxLatencyDuration:20,
+        maxBufferLength:20,backBufferLength:14,capLevelToPlayerSize:true
+      });
+      hls.on(window.Hls.Events.ERROR,(_event,data)=>{
+        if(ticket!==loadNumber||!active||!data.fatal)return;
+        if(recoveries++<1&&data.type===window.Hls.ErrorTypes.NETWORK_ERROR){hls.startLoad();return;}
+        if(recoveries<2&&data.type===window.Hls.ErrorTypes.MEDIA_ERROR){hls.recoverMediaError();return;}
+        nextPlayback();
+      });
+      hls.on(window.Hls.Events.MANIFEST_PARSED,autoPlay);
+      hls.attachMedia(el);hls.loadSource(url);
+    }else if(el.canPlayType("application/vnd.apple.mpegurl")){
+      mode="native";el.src=url;el.load();autoPlay();
+    }else{
+      alternative();return;
+    }
+    stopWatchdog();
     watchdog=setInterval(()=>{
-      if(!stillCurrent())return;
+      if(ticket!==loadNumber||!active){stopWatchdog();return;}
       const now=Date.now();
-      if(!confirmed&&now-started>14000){nextMode();return;}
-      if(confirmed&&current.readyState<2&&now-lastFrame>18000){nextMode();}
-    },1100);
+      if(!hasFrames&&now-startedAt>16000){nextPlayback();return;}
+      if(hasFrames&&!el.paused&&!el.seeking&&now-lastProgressAt>22000){nextPlayback();}
+    },2000);
   }
   function show(){
     if(active)return;
-    active=true;
-    waiting.hidden=true;
-    stage.hidden=false;
-    status("connecting");
+    active=true;misses=0;
+    waiting.hidden=true;stage.hidden=false;
     startVideo();
   }
   function hide(){
-    if(!active){status("offline");return;}
-    active=false;
-    confirmed=false;
-    clearPlayer();
-    modesTried.clear();
-    mode="";
-    stage.hidden=true;
-    waiting.hidden=false;
-    status("offline");
+    if(!active){status("waiting");return;}
+    active=false;loadNumber++;
+    destroy();stage.hidden=true;waiting.hidden=false;status("waiting");
   }
   async function check(){
     if(!endpoint||checking)return;
     checking=true;
     const controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),8000);
+    const timer=setTimeout(()=>controller.abort(),7000);
     try{
-      const url=endpoint.origin+endpoint.pathname+"/index.m3u8";
-      const response=await fetch(url,{cache:"no-store",signal:controller.signal});
-      const body=response.ok?await response.text():"";
-      // A real media or master playlist, not a generic HTML/error response.
-      const available=body.startsWith("#EXTM3U")&&
-        (body.includes("#EXT-X-STREAM-INF")||body.includes("#EXTINF:")||body.includes("#EXT-X-PART:"));
-      if(available){misses=0;show();}
-      else if(++misses>=3)hide();
+      const response=await fetch(endpoint.origin+endpoint.pathname+"/index.m3u8",{cache:"no-store",signal:controller.signal});
+      const manifest=response.ok?await response.text():"";
+      if(manifest.startsWith("#EXTM3U")&&manifest.includes("#EXTINF")){
+        misses=0;show();
+      }else if(++misses>=3)hide();
     }catch(_){if(++misses>=3)hide();}
-    finally{clearTimeout(timeout);checking=false;}
+    finally{clearTimeout(timer);checking=false;}
   }
   async function boot(){
-    status("offline");
+    status("waiting");
     if(local)endpoint=valid("http://127.0.0.1:8888/culto");
     else{
       try{
@@ -260,12 +207,17 @@
         const config=await response.json();
         if(config.enabled!==true)return;
         endpoint=valid(config.hlsPageUrl);
-        if(config.format==="horizontal"||config.format==="vertical")holder.dataset.format=config.format;
+        if(["horizontal","vertical"].includes(config.format))holder.dataset.format=config.format;
       }catch(_){return;}
     }
     if(!endpoint)return;
     await check();
     setInterval(check,10000);
+    document.addEventListener("visibilitychange",()=>{
+      if(!document.hidden&&active&&mode==="native"&&video&&!hasFrames){
+        video.play().catch(()=>{});
+      }
+    });
   }
   boot();
 })();
