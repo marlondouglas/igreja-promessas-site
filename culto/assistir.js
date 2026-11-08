@@ -59,7 +59,19 @@
     video.controls=true;
     video.preload="auto";
     video.addEventListener("error",()=>{if(playing)fallbackFrame();},{once:true});
-    stage.replaceChildren(video);
+    const playButton=document.createElement("button");
+    playButton.type="button";
+    playButton.className="live-play-overlay";
+    playButton.textContent="▶ Toque para assistir";
+    playButton.hidden=true;
+    playButton.addEventListener("click",()=>{
+      if(!video)return;
+      video.muted=false;
+      video.play().then(()=>{playButton.hidden=true;}).catch(()=>{playButton.hidden=false;});
+    });
+    video.addEventListener("playing",()=>{playButton.hidden=true;});
+    const tryPlay=()=>video?.play().catch(()=>{playButton.hidden=false;});
+    stage.replaceChildren(video,playButton);
     if(window.Hls&&window.Hls.isSupported()){
       hls=new window.Hls({
         enableWorker:true,lowLatencyMode:false,
@@ -72,10 +84,10 @@
       });
       hls.loadSource(url);
       hls.attachMedia(video);
-      hls.on(window.Hls.Events.MANIFEST_PARSED,()=>video?.play().catch(()=>{}));
+      hls.on(window.Hls.Events.MANIFEST_PARSED,tryPlay);
     }else if(video.canPlayType("application/vnd.apple.mpegurl")){
       video.src=url;
-      video.play().catch(()=>{});
+      tryPlay();
     }else{
       fallbackFrame();
     }
