@@ -148,6 +148,23 @@
         alternative();
       }
     }
+    // iOS reproduz HLS nativamente: buscar até ~15s atrás da borda ao vivo
+    // quando a janela disponível já contém 15s. O navegador pode ajustar o ponto.
+    let nativeDelayApplied=false;
+    const applyNativeDelay=()=>{
+      if(mode!=="native"||nativeDelayApplied||!el.seekable||!el.seekable.length)return;
+      try{
+        const i=el.seekable.length-1;
+        const start=el.seekable.start(i),end=el.seekable.end(i);
+        const target=end-15;
+        if(Number.isFinite(target)&&target>=start+0.25){
+          el.currentTime=target;
+          nativeDelayApplied=true;
+        }
+      }catch(_){/* live window may not be ready until playback starts */}
+    };
+    el.addEventListener("loadedmetadata",applyNativeDelay);
+    el.addEventListener("canplay",applyNativeDelay);
     const useNative=!forceHls&&apple&&!!el.canPlayType("application/vnd.apple.mpegurl");
     if(useNative){
       mode="native";el.src=url;el.load();autoPlay();
