@@ -155,8 +155,8 @@
       mode="hls";
       hls=new window.Hls({
         enableWorker:true,lowLatencyMode:false,
-        liveSyncDuration:8,liveMaxLatencyDuration:20,
-        maxBufferLength:20,backBufferLength:14,capLevelToPlayerSize:true
+        liveSyncDuration:15,liveMaxLatencyDuration:36,
+        maxBufferLength:32,backBufferLength:25,capLevelToPlayerSize:true
       });
       hls.on(window.Hls.Events.ERROR,(_event,data)=>{
         if(ticket!==loadNumber||!active||!data.fatal)return;
