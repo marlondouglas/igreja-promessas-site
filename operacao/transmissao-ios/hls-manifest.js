@@ -54,7 +54,14 @@
     const lines = linesOf(text);
     if (!lines.length || lines[0].indexOf("#EXTM3U") !== 0) return null;
     const variants = [];
+    let audioUri = "";
     for (let i = 0; i < lines.length; i++) {
+      if (lines[i].indexOf("#EXT-X-MEDIA:") === 0) {
+        const mediaAttrs = parseAttributes(lines[i]);
+        if (String(mediaAttrs.TYPE || "").toUpperCase() === "AUDIO" && mediaAttrs.URI && !audioUri) {
+          audioUri = mediaAttrs.URI;
+        }
+      }
       if (lines[i].indexOf("#EXT-X-STREAM-INF:") !== 0) continue;
       const attrs = parseAttributes(lines[i]);
       let uri = "";
@@ -70,6 +77,7 @@
     }
     return {
       variants: variants,
+      audioUri: audioUri,
       isMedia: lines.some(function (line) { return line.indexOf("#EXTINF:") === 0; })
     };
   }
@@ -82,6 +90,7 @@
       mediaSequence: null,
       endList: false,
       map: false,
+      mapUri: "",
       segments: []
     };
     let pendingDuration = null;
@@ -95,6 +104,7 @@
         media.endList = true;
       } else if (line.indexOf("#EXT-X-MAP:") === 0) {
         media.map = true;
+        media.mapUri = parseAttributes(line).URI || "";
       } else if (line.indexOf("#EXT-X-PROGRAM-DATE-TIME:") === 0) {
         pendingDate = line.slice("#EXT-X-PROGRAM-DATE-TIME:".length).trim();
       } else if (line.indexOf("#EXTINF:") === 0) {
@@ -347,6 +357,16 @@
     return decision;
   }
 
+  function probePlan(masterText) {
+    const master = parseMaster(masterText);
+    const variant = preferredVariant(master);
+    return {
+      videoUri: variant && variant.uri || "",
+      audioUri: master && master.audioUri || "",
+      codecs: variant && variant.codecs || ""
+    };
+  }
+
   function chosen(candidate) {
     const decision = candidate.assessment;
     decision.role = candidate.role;
@@ -366,6 +386,7 @@
     needsAppleHlsPipeline: needsAppleHlsPipeline,
     parseMaster: parseMaster,
     parseMedia: parseMedia,
+    probePlan: probePlan,
     preferredVariant: preferredVariant,
     assess: assess,
     choose: choose,

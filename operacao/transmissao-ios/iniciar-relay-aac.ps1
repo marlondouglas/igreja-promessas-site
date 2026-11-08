@@ -145,9 +145,10 @@ if ($PadraoTeste) {
   )
 } else {
   Write-Host "Lendo $(Hide-UserInfo $Origem) e publicando AAC em $(Hide-UserInfo $Destino)."
+  Write-Host "HLS /culto pode responder 404 enquanto o vídeo ainda não chegou. Áudio Opus no RTSP não significa que o WHIP parou."
   $inputArgs = @(
     "-hide_banner", "-loglevel", "warning", "-nostdin",
-    "-rw_timeout", "15000000", "-rtsp_transport", "tcp",
+    "-timeout", "15000000", "-rtsp_transport", "tcp",
     "-i", $Origem,
     "-map", "0:v:0", "-map", "0:a:0"
   )

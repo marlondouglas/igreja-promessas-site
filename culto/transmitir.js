@@ -67,6 +67,28 @@
    pc.addEventListener("icegatheringstatechange",cb);
   });
  }
+ async function limitVideo(pc){
+  const sender=pc.getSenders().find(s=>s.track?.kind==="video");
+  if(!sender||!window.PromessasWhipVideo)return;
+  try{
+    await sender.setParameters(window.PromessasWhipVideo.applyVideoSenderLimits(sender.getParameters()));
+  }catch(_){/* The negotiated encoding remains active if the browser rejects the limits. */}
+ }
+ async function reportVideoFlow(pc){
+  try{
+    const stats=await pc.getStats();
+    let videoBytes=0,audioBytes=0,frames=0;
+    stats.forEach(report=>{
+      if(report.type!=="outbound-rtp")return;
+      const kind=report.kind||report.mediaType;
+      if(kind==="video"){videoBytes=report.bytesSent||0;frames=report.framesEncoded||0;}
+      if(kind==="audio")audioBytes=report.bytesSent||0;
+    });
+    if(audioBytes>0&&videoBytes===0&&frames===0){
+      report("O áudio está saindo, mas o vídeo composto não gerou pacotes. O relay não recebe imagem e o HLS de /culto pode responder 404 mesmo com a publicação ativa.");
+    }
+  }catch(_){}
+ }
  async function start(){
   if(!on.checked||attempting||connection)return;
   const url=allowedURL(endpoint.value);
@@ -86,18 +108,8 @@
    const pc=new RTCPeerConnection({iceServers:[]});
    peer=pc;
    for(const t of tracks)pc.addTrack(t,stream);
-   // On modest CPUs, a bounded H.264 bitrate gives consistent 720p without encoder spikes.
-   // The MediaMTX fMP4 viewer will buffer three 2-second segments before playback.
-   const vsender=pc.getSenders().find(s=>s.track?.kind==="video");
-   if(vsender){
-     try{
-       const params=vsender.getParameters();
-       if(!params.encodings?.length)params.encodings=[{}];
-       params.encodings[0].maxBitrate=2400000;
-       params.encodings[0].maxFramerate=24;
-       await vsender.setParameters(params);
-     }catch(_){/* Browser chooses safe defaults if sender parameters are unsupported. */}
-   }
+   // Bitrate is applied after the answer. Setting it before createOffer can mark the
+   // video encoding inactive: Opus still flows, H.264 is announced, and RTSP gets no frames.
    // HLS viewers need H264; browser default VP8 cannot be repackaged into HLS by MediaMTX.
    const vcaps=RTCRtpSender.getCapabilities?.("video")?.codecs||[];
    const h264=vcaps.filter(c=>c.mimeType?.toLowerCase()==="video/h264");
@@ -108,6 +120,11 @@
     if(pc.connectionState==="connected"){
       connection=true;badge("NO AR · SERVIDOR LOCAL");
       report("✓ Sinal recebido pelo notebook. O site público está conectado por HTTPS. Confira imagem e áudio no celular.");
+      const videoSender=pc.getSenders().find(s=>s.track?.kind==="video");
+      if(videoSender&&typeof videoSender.generateKeyFrame==="function"){
+        videoSender.generateKeyFrame().catch(()=>{});
+      }
+      setTimeout(()=>{ if(peer===pc) reportVideoFlow(pc); },8000);
     } else if(["failed","disconnected"].includes(pc.connectionState)){
       badge("CONEXÃO INTERROMPIDA");
       report("Falha de conexão com MediaMTX. Verifique o notebook. A saída local continua disponível.");
@@ -126,6 +143,7 @@
    if(where)resource=new URL(where,url).toString();
    const sdp=await res.text();
    await pc.setRemoteDescription({type:"answer",sdp});
+   await limitVideo(pc);
    // Wait for the ICE connection; the status badge confirms real connectivity.
    connectionTimeout=setTimeout(()=>{
     if(!connection&&peer===pc){badge("SEM RECEPÇÃO");report("WHIP aceito, mas os pacotes de vídeo não chegaram. Verifique a rede e o firewall.");}

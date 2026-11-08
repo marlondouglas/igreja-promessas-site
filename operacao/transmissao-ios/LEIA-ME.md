@@ -4,7 +4,15 @@ Safari e Chrome no iPhone usam o reprodutor HLS do sistema. Os dois recusam áud
 
 O site público já prefere `/culto-aac` quando o master anuncia `mp4a.40` e `avc1`. Dá para testar o telefone sem publicar este repositório. A transmissão ao vivo já foi encerrada. Nada aqui reinicia o MediaMTX nem o site.
 
-Este pacote foi conferido com ffmpeg e ffprobe neste ambiente. Safari e Chrome no iPhone não foram abertos daqui. `RESULTADO: APTO` no verificador autoriza a tentativa no telefone; não significa que o telefone já passou.
+As barras H.264/AAC em `/culto-aac` passaram no iPhone, no Safari, no Chrome e no site público. O sinal do estúdio é outro problema: o RTSP de `/culto` entregou pacotes Opus e nenhum pacote de vídeo. O H.264 foi só anunciado, sem resolução. Um 404 em `/culto` nesse estado não significa que o WHIP parou.
+
+`-rw_timeout` não existe no FFmpeg 9.0.2 para RTSP. O script agora usa `-timeout`. O verificador deixa de tratar o corpo HTTP como texto quando o PowerShell entrega `byte[]`, e aceita fMP4 com `EXT-X-MAP` e áudio em trilha separada.
+
+O estúdio aplicava o limite de bitrate do vídeo antes do offer. Isso pode deixar o encoding de vídeo inativo enquanto o Opus continua. A correção aplica o limite depois da resposta e pede um keyframe. Ela não entra no site público enquanto este PR não for publicado. Para testar sem publicar: sirva esta branch na raiz do repositório e abra `http://127.0.0.1:8080/culto/studio.html`, com o WHIP ainda em `http://127.0.0.1:8889/culto/whip`.
+
+Se, com essa página, o RTSP continuar sem vídeo, a única medição seguinte é `chrome://webrtc-internals`: no `outbound-rtp` de vídeo, `framesEncoded` e `bytesSent` depois de 10 s. Os dois em zero, com áudio acima de zero, mostram que o navegador não está codificando o canvas. Se os quadros sobem e o RTSP segue sem vídeo, o próximo ponto é o MediaMTX, não outro ajuste no navegador.
+
+Não reinicie o MediaMTX. Para trocar o relay, rode `-Parar` e substitua os dois `.ps1`. Isso encerra só o ffmpeg cuja linha contém `culto-aac`.
 
 ## Requisitos
 

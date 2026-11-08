@@ -23,7 +23,34 @@ function Add-Ok([string]$message) {
 function Get-Text([string]$uri) {
   $response = Invoke-WebRequest -Uri $uri -UseBasicParsing -TimeoutSec 10 -Headers @{ "Cache-Control" = "no-cache" }
   if ($response.StatusCode -ne 200) { throw "HTTP $($response.StatusCode) em $uri" }
-  return [string]$response.Content
+  $content = $response.Content
+  if ($content -is [byte[]] -or ($content -is [System.Array] -and $content.Count -gt 0 -and $content[0] -is [byte])) {
+    return [System.Text.Encoding]::UTF8.GetString([byte[]]$content)
+  }
+  return [string]$content
+}
+
+function Get-MediaParts([string]$text) {
+  $mapUri = ""
+  $segmentUri = ""
+  $pending = $null
+  $durations = @()
+  $target = $null
+  $sequence = $null
+  $endList = $false
+  foreach ($line in @($text -split "\r?\n" | ForEach-Object { $_.Trim() } | Where-Object { $_ })) {
+    if ($line -like "#EXT-X-TARGETDURATION:*") { $target = [int]($line.Split(":")[1].Trim()) }
+    elseif ($line -like "#EXT-X-MEDIA-SEQUENCE:*") { $sequence = [int]($line.Split(":")[1].Trim()) }
+    elseif ($line -like "#EXT-X-ENDLIST*") { $endList = $true }
+    elseif ($line -like "#EXT-X-MAP:*" -and $line -match 'URI="([^"]+)"') { $mapUri = $Matches[1] }
+    elseif ($line -like "#EXTINF:*") { $pending = [double]($line.Substring(8).Split(",")[0]) }
+    elseif ($line -notlike "#*" -and $null -ne $pending) {
+      $durations += $pending
+      if (-not $segmentUri) { $segmentUri = $line }
+      $pending = $null
+    }
+  }
+  return [pscustomobject]@{ MapUri = $mapUri; SegmentUri = $segmentUri; Durations = @($durations); Target = $target; Sequence = $sequence; EndList = $endList }
 }
 
 function Get-Attr([string]$line, [string]$name) {
@@ -51,6 +78,13 @@ try {
 }
 
 $lines = @($master -split "\r?\n" | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+$audioUri = ""
+foreach ($line in $lines) {
+  if ($line -like "#EXT-X-MEDIA:*" -and $line -match "TYPE=AUDIO" -and $line -match 'URI="([^"]+)"') {
+    $audioUri = $Matches[1]
+    break
+  }
+}
 $variantLine = $lines | Where-Object { $_ -like "#EXT-X-STREAM-INF:*" } | Select-Object -First 1
 $variantUri = ""
 if ($variantLine) {
@@ -90,24 +124,13 @@ try {
   Write-Host "RESULTADO: RECUSADO"
   exit 1
 }
-$mediaLines = @($media -split "\r?\n" | ForEach-Object { $_.Trim() } | Where-Object { $_ })
-$target = $null
-$sequence = $null
-$endList = $false
-$durations = @()
-$pending = $null
-$segmentUri = ""
-foreach ($line in $mediaLines) {
-  if ($line -like "#EXT-X-TARGETDURATION:*") { $target = [int]($line.Split(":")[1]) }
-  elseif ($line -like "#EXT-X-MEDIA-SEQUENCE:*") { $sequence = [int]($line.Split(":")[1]) }
-  elseif ($line -like "#EXT-X-ENDLIST*") { $endList = $true }
-  elseif ($line -like "#EXTINF:*") { $pending = [double]($line.Substring(8).Split(",")[0]) }
-  elseif ($line -notlike "#*" -and $null -ne $pending) {
-    $durations += $pending
-    if (-not $segmentUri) { $segmentUri = $line }
-    $pending = $null
-  }
-}
+$parts = Get-MediaParts $media
+$target = $parts.Target
+$sequence = $parts.Sequence
+$endList = $parts.EndList
+$durations = @($parts.Durations)
+$segmentUri = $parts.SegmentUri
+$mapUri = $parts.MapUri
 if ($null -eq $target -or $target -gt $MaxTargetDuration) {
   Add-Failure "EXT-X-TARGETDURATION=$target. O iPhone recebe até 15s neste verificador. 544s faz o aparelho esperar demais."
 } else {
@@ -135,29 +158,57 @@ if (-not $SemAvanco -and $null -ne $sequence) {
   }
 }
 
+function Save-InitSegment([string]$baseUrl, [string]$mapRel, [string]$segRel) {
+  $file = Join-Path $env:TEMP ("promessas-" + [guid]::NewGuid().ToString("n") + ".mp4")
+  $fs = [System.IO.File]::Create($file)
+  try {
+    foreach ($rel in @($mapRel, $segRel)) {
+      if (-not $rel) { continue }
+      $part = Join-Path $env:TEMP ("promessas-part-" + [guid]::NewGuid().ToString("n"))
+      Invoke-WebRequest -Uri ([Uri]::new([Uri]$baseUrl, $rel)).AbsoluteUri -UseBasicParsing -TimeoutSec 10 -OutFile $part
+      $bytes = [System.IO.File]::ReadAllBytes($part)
+      $fs.Write($bytes, 0, $bytes.Length)
+      Remove-Item -LiteralPath $part -Force -ErrorAction SilentlyContinue
+    }
+  } finally { $fs.Close() }
+  return $file
+}
+
+function Get-ProbeStreams([string]$file) {
+  $json = & $ffprobe -v error -show_entries "stream=codec_name,profile,width,height,channels,sample_rate" -of json $file | Out-String
+  if (-not $json.Trim()) { return @() }
+  return @((($json | ConvertFrom-Json).streams))
+}
+
 $ffprobe = Find-Ffprobe
 if (-not $ffprobe) {
   Add-Failure "ffprobe não encontrado. Ele vem na mesma pasta do ffmpeg e é obrigatório para ver o codec real do segmento."
 } elseif (-not $segmentUri) {
   Add-Failure "Não há segmento para o ffprobe."
 } else {
-  $segmentUrl = ([Uri]::new([Uri]$mediaUrl, $segmentUri)).AbsoluteUri
-  $temp = Join-Path $env:TEMP ("promessas-aac-" + [guid]::NewGuid().ToString("n") + ".mp4")
+  $temp = $null
+  $audioTemp = $null
   try {
-    Invoke-WebRequest -Uri $segmentUrl -UseBasicParsing -TimeoutSec 10 -OutFile $temp
-    $json = & $ffprobe -v error -show_entries "stream=codec_name,profile,width,height,channels,sample_rate" -of json $temp
-    $probe = $json | Out-String | ConvertFrom-Json
-    $video = $probe.streams | Where-Object { $_.codec_name -eq "h264" } | Select-Object -First 1
-    $audio = $probe.streams | Where-Object { $_.codec_name -eq "aac" } | Select-Object -First 1
-    $opus = $probe.streams | Where-Object { $_.codec_name -eq "opus" } | Select-Object -First 1
-    if ($opus) { Add-Failure "O segmento ainda contém Opus." }
+    $temp = Save-InitSegment $mediaUrl $mapUri $segmentUri
+    $streams = Get-ProbeStreams $temp
+    $video = $streams | Where-Object { $_.codec_name -eq "h264" } | Select-Object -First 1
+    $audio = $streams | Where-Object { $_.codec_name -eq "aac" } | Select-Object -First 1
+    if ($streams | Where-Object { $_.codec_name -eq "opus" } | Select-Object -First 1) { Add-Failure "O segmento ainda contém Opus." }
     if (-not $video) { Add-Failure "ffprobe não encontrou H.264 no segmento." }
     else {
       $seen = "$($video.width)x$($video.height)"
       if ($seen -ne $ResolucaoEsperada) { Add-Failure "ffprobe leu $seen e a playlist anuncia $ResolucaoEsperada." }
       else { Add-Ok "ffprobe confirma H.264 $seen, perfil $($video.profile)." }
     }
-    if (-not $audio) { Add-Failure "ffprobe não encontrou AAC no segmento." }
+    if (-not $audio -and $audioUri) {
+      $audioUrl = ([Uri]::new([Uri]$Url, $audioUri)).AbsoluteUri
+      $audioParts = Get-MediaParts (Get-Text $audioUrl)
+      if ($audioParts.SegmentUri) {
+        $audioTemp = Save-InitSegment $audioUrl $audioParts.MapUri $audioParts.SegmentUri
+        $audio = (Get-ProbeStreams $audioTemp) | Where-Object { $_.codec_name -eq "aac" } | Select-Object -First 1
+      }
+    }
+    if (-not $audio) { Add-Failure "ffprobe não encontrou AAC no vídeo nem na trilha EXT-X-MEDIA." }
     elseif ([string]$audio.sample_rate -ne "48000" -or [int]$audio.channels -ne 2 -or [string]$audio.profile -ne "LC") {
       Add-Failure "Áudio ffprobe: perfil=$($audio.profile) canais=$($audio.channels) taxa=$($audio.sample_rate). O iPhone precisa de AAC-LC, 48000 Hz, estéreo."
     } else {
@@ -166,7 +217,9 @@ if (-not $ffprobe) {
   } catch {
     Add-Failure "ffprobe do segmento falhou. $($_.Exception.Message)"
   } finally {
-    if (Test-Path -LiteralPath $temp) { Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue }
+    foreach ($item in @($temp, $audioTemp)) {
+      if ($item -and (Test-Path -LiteralPath $item)) { Remove-Item -LiteralPath $item -Force -ErrorAction SilentlyContinue }
+    }
   }
 }
 

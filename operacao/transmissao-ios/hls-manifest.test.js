@@ -7,6 +7,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const hls = require("./hls-manifest.js");
+const whip = require("../../culto/whip-video.js");
 
 const dir = __dirname;
 const relay = fs.readFileSync(path.join(dir, "iniciar-relay-aac.ps1"), "utf8");
@@ -137,6 +138,11 @@ test("o relay não reinicia o MediaMTX e só publica em culto-aac", () => {
   assert.doesNotMatch(relay, /Stop-Process[^\n]*mediamtx/i);
   assert.doesNotMatch(relay, /Restart-Service|mediamtx\.exe/i);
   assert.doesNotMatch(relay, /senha\s*=|password\s*=/i);
+  assert.doesNotMatch(relay, /rw_timeout/);
+  assert.match(relay, /"-timeout", "15000000"/);
+  assert.match(verifier, /UTF8\.GetString/);
+  assert.match(verifier, /EXT-X-MEDIA/);
+  assert.match(verifier, /EXT-X-MAP/);
   assert.match(verifier, /\$MaxTargetDuration = 15/);
   assert.ok(verifier.includes(OPUS));
   assert.match(verifier, /RESULTADO: APTO/);
@@ -182,4 +188,39 @@ test("os flags do relay geram H.264 1280x720 e AAC-LC estéreo", () => {
   assert.equal(String(audio.sample_rate), "48000");
   assert.equal(audio.channels, 2);
   assert.equal(streams.some((stream) => stream.codec_name === "opus"), false);
+});
+
+test("o limite de vídeo fica ativo e só é aplicado depois da resposta WHIP", () => {
+  const limited = whip.applyVideoSenderLimits({ encodings: [{ active: false, scaleResolutionDownBy: 1 }] });
+  assert.equal(limited.encodings[0].active, true);
+  assert.equal(limited.encodings[0].scaleResolutionDownBy, 1);
+  assert.equal(limited.encodings[0].maxBitrate, 2400000);
+  const src = fs.readFileSync(path.join(dir, "../../culto/transmitir.js"), "utf8");
+  const between = src.slice(src.indexOf("pc.addTrack"), src.indexOf("pc.createOffer"));
+  assert.equal(between.includes("setParameters"), false);
+  const answer = src.indexOf("setRemoteDescription");
+  assert.ok(src.indexOf("await limitVideo(pc)", answer) > answer);
+});
+
+test("fMP4 com EXT-X-MAP e áudio separado continua AAC utilizável", () => {
+  const master = [
+    "#EXTM3U",
+    '#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="audio",DEFAULT=YES,URI="audio_stream.m3u8"',
+    '#EXT-X-STREAM-INF:BANDWIDTH=2000000,CODECS="avc1.42001f,mp4a.40.2",RESOLUTION=1280x720,AUDIO="audio"',
+    "video_stream.m3u8"
+  ].join("\n");
+  const plan = hls.probePlan(master);
+  assert.equal(plan.videoUri, "video_stream.m3u8");
+  assert.equal(plan.audioUri, "audio_stream.m3u8");
+  const media = hls.parseMedia("#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:1\n#EXT-X-MAP:URI=\"video_init.mp4\"\n#EXTINF:2.0,\nvideo_1.mp4\n");
+  assert.equal(media.mapUri, "video_init.mp4");
+  assert.equal(media.segments[0].uri, "video_1.mp4");
+  const decision = hls.choose([{
+    role: "aac",
+    href: "http://127.0.0.1:8888/culto-aac/index.m3u8",
+    masterText: master,
+    mediaText: "#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:1\n#EXT-X-MAP:URI=\"video_init.mp4\"\n#EXT-X-PROGRAM-DATE-TIME:2026-11-08T21:00:08.000Z\n#EXTINF:2.0,\nvideo_1.mp4\n"
+  }], { apple: true, now: Date.parse("2026-11-08T21:00:10.000Z") });
+  assert.equal(decision.play, true);
+  assert.equal(decision.warning, "");
 });
