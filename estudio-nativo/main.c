@@ -28,6 +28,12 @@ static int g_companion;
 static char g_host[64];
 static HANDLE g_err_rd;
 static HWND g_ip;
+static HANDLE g_prev_proc, g_prev_rd, g_prev_thread;
+static CRITICAL_SECTION g_frame_cs;
+static unsigned char *g_frame;
+static int g_frame_ready, g_cs_ready;
+static volatile LONG g_prev_stop;
+enum { PREVIEW_W = 320, PREVIEW_H = 180, PREVIEW_BYTES = PREVIEW_W * PREVIEW_H * 3 };
 static char g_camera_name[160], g_mic_name[160];
 static char g_open_file[MAX_PATH], g_close_file[MAX_PATH], g_final_file[MAX_PATH];
 
@@ -156,6 +162,8 @@ static void on_clear_key(void) {
     set_status(L"Senha removida deste computador.");
 }
 
+static void start_preview(void);
+
 static void refresh_devices(void) {
     SECURITY_ATTRIBUTES sa = {sizeof(sa), NULL, TRUE};
     HANDLE rd = NULL, wr = NULL;
@@ -201,7 +209,8 @@ static void refresh_devices(void) {
     if (nv) SendMessageW(g_cam, CB_SETCURSEL, 0, 0);
     if (na) SendMessageW(g_mic, CB_SETCURSEL, 0, 0);
     if (!nv && !na) set_status(L"Nenhuma câmera ou microfone apareceu no DirectShow. Confira o ffmpeg GPL.");
-    else set_status(L"Dispositivos lidos do DirectShow.");
+    else if (!g_companion) set_status(L"Dispositivos lidos do DirectShow.");
+    if (g_companion && !g_running) start_preview();
 }
 
 static void selected_name(HWND combo, char *out, size_t cap) {
@@ -211,6 +220,127 @@ static void selected_name(HWND combo, char *out, size_t cap) {
     if (i < 0) return;
     SendMessageW(combo, CB_GETLBTEXT, i, (LPARAM)w);
     WideCharToMultiByte(CP_UTF8, 0, w, -1, out, (int)cap, NULL, NULL);
+}
+
+static void ensure_frame(void) {
+    if (!g_cs_ready) {
+        InitializeCriticalSection(&g_frame_cs);
+        g_cs_ready = 1;
+    }
+    if (!g_frame) g_frame = (unsigned char *)calloc(1, PREVIEW_BYTES);
+}
+
+static DWORD WINAPI preview_reader(LPVOID unused) {
+    unsigned char *buf = (unsigned char *)malloc(PREVIEW_BYTES);
+    (void)unused;
+    if (!buf) return 0;
+    while (!g_prev_stop) {
+        size_t got = 0;
+        while (got < PREVIEW_BYTES) {
+            DWORD n = 0;
+            if (!ReadFile(g_prev_rd, buf + got, (DWORD)(PREVIEW_BYTES - got), &n, NULL) || !n) {
+                free(buf);
+                return 0;
+            }
+            got += n;
+        }
+        EnterCriticalSection(&g_frame_cs);
+        memcpy(g_frame, buf, PREVIEW_BYTES);
+        g_frame_ready = 1;
+        LeaveCriticalSection(&g_frame_cs);
+        if (g_win) InvalidateRect(g_win, NULL, FALSE);
+    }
+    free(buf);
+    return 0;
+}
+
+static void stop_preview(void) {
+    g_prev_stop = 1;
+    if (g_prev_proc) {
+        TerminateProcess(g_prev_proc, 0);
+        WaitForSingleObject(g_prev_proc, 2000);
+        CloseHandle(g_prev_proc);
+        g_prev_proc = NULL;
+    }
+    if (g_prev_rd) {
+        CloseHandle(g_prev_rd);
+        g_prev_rd = NULL;
+    }
+    if (g_prev_thread) {
+        WaitForSingleObject(g_prev_thread, 2000);
+        CloseHandle(g_prev_thread);
+        g_prev_thread = NULL;
+    }
+    if (g_cs_ready) {
+        EnterCriticalSection(&g_frame_cs);
+        g_frame_ready = 0;
+        LeaveCriticalSection(&g_frame_cs);
+    }
+}
+
+static void start_preview(void) {
+    ArgList args;
+    char input[220];
+    char *joined;
+    wchar_t cmd[2048];
+    SECURITY_ATTRIBUTES sa = {sizeof(sa), NULL, TRUE};
+    STARTUPINFOW si;
+    PROCESS_INFORMATION pi;
+    HANDLE wr = NULL, err_rd = NULL, err_wr = NULL;
+    if (!g_companion || g_running) return;
+    stop_preview();
+    ensure_frame();
+    selected_name(g_cam, g_camera_name, sizeof g_camera_name);
+    if (!g_camera_name[0]) return;
+    snprintf(input, sizeof input, "video=%s", g_camera_name);
+    memset(&args, 0, sizeof args);
+    if (!args_push(&args, "ffmpeg") || !args_push(&args, "-hide_banner") || !args_push(&args, "-loglevel")
+        || !args_push(&args, "error") || !args_push(&args, "-f") || !args_push(&args, "dshow")
+        || !args_push(&args, "-framerate") || !args_push(&args, "12") || !args_push(&args, "-i")
+        || !args_push(&args, input) || !args_push(&args, "-an") || !args_push(&args, "-vf")
+        || !args_push(&args, "scale=320:180") || !args_push(&args, "-f") || !args_push(&args, "rawvideo")
+        || !args_push(&args, "-pix_fmt") || !args_push(&args, "bgr24") || !args_push(&args, "pipe:1")) {
+        args_free(&args);
+        return;
+    }
+    joined = args_join(&args);
+    args_free(&args);
+    if (!joined || (size_t)MultiByteToWideChar(CP_UTF8, 0, joined, -1, cmd, 2048) == 0) {
+        free(joined);
+        return;
+    }
+    free(joined);
+    if (!CreatePipe(&g_prev_rd, &wr, &sa, 0) || !CreatePipe(&err_rd, &err_wr, &sa, 0)) {
+        if (g_prev_rd) CloseHandle(g_prev_rd);
+        g_prev_rd = NULL;
+        if (wr) CloseHandle(wr);
+        if (err_rd) CloseHandle(err_rd);
+        if (err_wr) CloseHandle(err_wr);
+        return;
+    }
+    SetHandleInformation(g_prev_rd, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(err_rd, HANDLE_FLAG_INHERIT, 0);
+    ZeroMemory(&si, sizeof si);
+    si.cb = sizeof si;
+    si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+    si.hStdOutput = wr;
+    si.hStdError = err_wr;
+    if (!CreateProcessW(NULL, cmd, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+        CloseHandle(g_prev_rd);
+        g_prev_rd = NULL;
+        CloseHandle(wr);
+        CloseHandle(err_rd);
+        CloseHandle(err_wr);
+        return;
+    }
+    CloseHandle(wr);
+    CloseHandle(err_wr);
+    CloseHandle(err_rd);
+    CloseHandle(pi.hThread);
+    g_prev_proc = pi.hProcess;
+    g_prev_stop = 0;
+    g_prev_thread = CreateThread(NULL, 0, preview_reader, NULL, 0, NULL);
 }
 
 static void stop_ffmpeg(void) {
@@ -233,6 +363,7 @@ static int start_scene(SceneKind scene) {
     PROCESS_INFORMATION pi;
     char typed[256];
     const char *key = NULL;
+    if (g_companion) stop_preview();
     if (read_typed_key(typed, sizeof typed)) {
         save_current_key(typed);
         key = g_keybuf;
@@ -266,16 +397,18 @@ static int start_scene(SceneKind scene) {
         wchar_t w[200];
         MultiByteToWideChar(CP_UTF8, 0, err, -1, w, 200);
         set_status(w);
+        if (g_companion) start_preview();
         return 0;
     }
     joined = args_join(&args);
     safe = redact_text(joined ? joined : "", key);
     log_line(safe ? safe : "ffmpeg");
     free(safe);
-    if (!joined || (size_t)MultiByteToWideChar(CP_UTF8, 0, joined, -1, cmd, 4096) == 0) {
+        if (!joined || (size_t)MultiByteToWideChar(CP_UTF8, 0, joined, -1, cmd, 4096) == 0) {
         free(joined);
         args_free(&args);
         set_status(L"Não montei a linha do ffmpeg.");
+        if (g_companion) start_preview();
         return 0;
     }
     secure_wipe(joined, strlen(joined));
@@ -299,6 +432,7 @@ static int start_scene(SceneKind scene) {
             secure_wipe(cmd, sizeof cmd);
             if (wr) CloseHandle(wr);
             set_status(L"Não iniciei o ffmpeg. Verifique se ele está no PATH.");
+            if (g_companion) start_preview();
             return 0;
         }
         if (wr) CloseHandle(wr);
@@ -322,7 +456,7 @@ static void poll_health(void) {
     HINTERNET ses, con, req;
     char buf[4096];
     DWORD n = 0, got = 0;
-    if (!g_running) return;
+    if (g_companion || !g_running) return;
     ses = WinHttpOpen(L"EstudioPromessas", WINHTTP_ACCESS_TYPE_NO_PROXY, NULL, NULL, 0);
     if (!ses) return;
     con = WinHttpConnect(ses, L"127.0.0.1", 8888, 0);
@@ -351,6 +485,7 @@ static void advance_scene(void) {
         g_running = 0;
         set_status(L"O ffmpeg encerrou. Veja o registro abaixo. A senha não é escrita nele.");
         log_line("ffmpeg encerrou");
+        if (g_companion) start_preview();
         return;
     }
     if (g_scene_kind == SCENE_CAMERA || g_scene_kind == SCENE_SCREEN) return;
@@ -368,13 +503,16 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
     case WM_CREATE:
         if (g_companion) {
-            g_cam = CreateWindowW(L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, 24, 70, 320, 200, hwnd, (HMENU)ID_CAM, NULL, NULL);
-            g_mic = CreateWindowW(L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, 24, 140, 320, 200, hwnd, (HMENU)ID_MIC, NULL, NULL);
-            g_ip = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 24, 210, 320, 28, hwnd, (HMENU)ID_IP, NULL, NULL);
-            g_start = CreateWindowW(L"BUTTON", L"Iniciar envio", WS_CHILD | WS_VISIBLE, 24, 260, 150, 36, hwnd, (HMENU)ID_START, NULL, NULL);
-            CreateWindowW(L"BUTTON", L"Parar", WS_CHILD | WS_VISIBLE, 184, 260, 120, 36, hwnd, (HMENU)ID_STOP, NULL, NULL);
-            g_status = CreateWindowW(L"STATIC", L"Informe o IP do notebook. Neste mesmo PC use 127.0.0.1.", WS_CHILD | WS_VISIBLE, 24, 310, 420, 48, hwnd, NULL, NULL, NULL);
-            g_log = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_READONLY | WS_VSCROLL, 24, 370, 420, 160, hwnd, (HMENU)ID_LOG, NULL, NULL);
+            CreateWindowW(L"STATIC", L"Câmera", WS_CHILD | WS_VISIBLE, 370, 48, 200, 20, hwnd, NULL, NULL, NULL);
+            g_cam = CreateWindowW(L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, 370, 70, 420, 200, hwnd, (HMENU)ID_CAM, NULL, NULL);
+            CreateWindowW(L"STATIC", L"Microfone", WS_CHILD | WS_VISIBLE, 370, 118, 200, 20, hwnd, NULL, NULL, NULL);
+            g_mic = CreateWindowW(L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, 370, 140, 420, 200, hwnd, (HMENU)ID_MIC, NULL, NULL);
+            CreateWindowW(L"STATIC", L"IP do notebook", WS_CHILD | WS_VISIBLE, 370, 188, 220, 20, hwnd, NULL, NULL, NULL);
+            g_ip = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 370, 210, 420, 28, hwnd, (HMENU)ID_IP, NULL, NULL);
+            g_start = CreateWindowW(L"BUTTON", L"Iniciar envio", WS_CHILD | WS_VISIBLE, 370, 256, 150, 36, hwnd, (HMENU)ID_START, NULL, NULL);
+            CreateWindowW(L"BUTTON", L"Parar", WS_CHILD | WS_VISIBLE, 530, 256, 120, 36, hwnd, (HMENU)ID_STOP, NULL, NULL);
+            g_status = CreateWindowW(L"STATIC", L"Informe o IP do notebook. Neste mesmo PC use 127.0.0.1.", WS_CHILD | WS_VISIBLE, 24, 250, 320, 64, hwnd, NULL, NULL, NULL);
+            g_log = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_READONLY | WS_VSCROLL, 24, 330, 770, 220, hwnd, (HMENU)ID_LOG, NULL, NULL);
             g_scene = g_status;
             SetTimer(hwnd, ID_TIMER, 1000, NULL);
             return 0;
@@ -467,12 +605,49 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             ULONGLONG sec = (GetTickCount64() - g_scene_start) / 1000;
             wchar_t clock[16];
             _snwprintf(clock, 16, L"%02u:%02u", (unsigned)(sec / 60), (unsigned)(sec % 60));
-            SetWindowTextW(g_clock, clock);
+            if (g_clock) SetWindowTextW(g_clock, clock);
             advance_scene();
-            if ((sec % 5) == 0) poll_health();
+            if (!g_companion && (sec % 5) == 0) poll_health();
         }
         return 0;
+    case WM_PAINT:
+        if (g_companion) {
+            PAINTSTRUCT ps;
+            HDC dc = BeginPaint(hwnd, &ps);
+            RECT box = {24, 48, 24 + PREVIEW_W, 48 + PREVIEW_H};
+            unsigned char *paint = (unsigned char *)malloc(PREVIEW_BYTES);
+            int ready = 0;
+            HBRUSH gold = CreateSolidBrush(RGB(217, 180, 119));
+            FrameRect(dc, &box, gold);
+            DeleteObject(gold);
+            if (paint && g_cs_ready) {
+                EnterCriticalSection(&g_frame_cs);
+                ready = g_frame_ready && g_frame;
+                if (ready) memcpy(paint, g_frame, PREVIEW_BYTES);
+                LeaveCriticalSection(&g_frame_cs);
+            }
+            if (ready) {
+                BITMAPINFO bmi;
+                ZeroMemory(&bmi, sizeof bmi);
+                bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+                bmi.bmiHeader.biWidth = PREVIEW_W;
+                bmi.bmiHeader.biHeight = -PREVIEW_H;
+                bmi.bmiHeader.biPlanes = 1;
+                bmi.bmiHeader.biBitCount = 24;
+                StretchDIBits(dc, 24, 48, PREVIEW_W, PREVIEW_H, 0, 0, PREVIEW_W, PREVIEW_H, paint, &bmi, DIB_RGB_COLORS, SRCCOPY);
+            } else {
+                const wchar_t *hint = g_running ? L"Prévia pausada durante o envio." : L"Prévia da webcam";
+                SetBkColor(dc, RGB(18, 20, 26));
+                SetTextColor(dc, RGB(246, 241, 232));
+                TextOutW(dc, 36, 120, hint, (int)wcslen(hint));
+            }
+            free(paint);
+            EndPaint(hwnd, &ps);
+            return 0;
+        }
+        return DefWindowProcW(hwnd, msg, wp, lp);
     case WM_COMMAND:
+        if (g_companion && HIWORD(wp) == CBN_SELCHANGE && LOWORD(wp) == ID_CAM && !g_running) start_preview();
         switch (LOWORD(wp)) {
         case ID_REFRESH: refresh_devices(); break;
         case ID_CHANGE: on_change_key(); break;
@@ -493,7 +668,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             break;
         case ID_SKIP: if (g_running) start_scene(SCENE_CAMERA); break;
         case ID_END: if (g_running) start_scene(SCENE_CLOSING); break;
-        case ID_STOP: stop_ffmpeg(); SetWindowTextW(g_scene, L"EM ESPERA"); set_status(L"Envio parado. O MediaMTX não foi reiniciado."); break;
+        case ID_STOP: stop_ffmpeg(); SetWindowTextW(g_scene, L"EM ESPERA"); set_status(L"Envio parado. O MediaMTX não foi reiniciado."); if (g_companion) start_preview(); break;
         default: break;
         }
         return 0;
@@ -522,7 +697,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, wchar_t *cmd, int show) {
     RegisterClassW(&wc);
     g_win = CreateWindowExW(0, L"EstudioPromessas",
         g_companion ? L"Igreja Promessas — Câmera deste PC" : L"Igreja Promessas — Central de Transmissão",
-        WS_OVERLAPPEDWINDOW | WS_VISIBLE, 40, 30, g_companion ? 520 : 1280, g_companion ? 620 : 820, NULL, NULL, inst, NULL);
+        WS_OVERLAPPEDWINDOW | WS_VISIBLE, 40, 30, g_companion ? 860 : 1280, g_companion ? 640 : 820, NULL, NULL, inst, NULL);
     load_key();
     if (!g_companion) load_assets();
     refresh_devices();

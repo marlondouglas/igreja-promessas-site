@@ -129,6 +129,12 @@ int main(void) {
     expect(link_from_ffmpeg_line("frame= 12 fps=24") == LINK_UP, "indicador sobe com quadro");
     expect(link_from_ffmpeg_line("Connection refused") == LINK_DOWN, "indicador cai sem servidor");
     expect(link_from_ffmpeg_line("") == LINK_CONNECTING, "ainda conectando");
+    args_free(&args);
+    args_push(&args, "ffmpeg");
+    args_push(&args, "video=Integrated Camera");
+    joined = args_join(&args);
+    expect(joined && strstr(joined, "\"video=Integrated Camera\"") != NULL, "nome da webcam com espaco");
+    free(joined);
 
     if (g_fail) {
         fprintf(stderr, "%d falhas\n", g_fail);

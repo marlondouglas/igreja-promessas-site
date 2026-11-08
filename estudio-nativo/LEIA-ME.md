@@ -42,6 +42,6 @@ O celular publica em `rtmp://IP-DO-NOTEBOOK:1935/camera-remota`. Outro PC, ou es
 
 O IP não vem preenchido. Neste notebook, digite `127.0.0.1`. Em outro aparelho, use o IP que o Windows mostrar na rede. A configuração do MediaMTX não foi alterada. Se o servidor recusar o caminho novo, o aviso aparece no programa; não se abre autenticação nem firewall daqui.
 
-Modo câmera deste PC: `EstudioPromessas.exe --camera`. O estado “Conectado” só aparece quando o ffmpeg informa quadro ou saída. Recusa e senha errada aparecem como falha.
+Modo câmera deste PC: `EstudioPromessas.exe --camera`. A prévia usa a mesma webcam pelo DirectShow e pausa enquanto o envio ocupa o aparelho. O estado “Conectado” só aparece quando o ffmpeg informa quadro ou saída. Esse modo não consulta `/culto-aac`, para não parecer que substituiu a transmissão atual. Recusa e senha errada aparecem como falha.
 
 O app Android está em `camera-remota`. O comando é `gradle assembleDebug`. O APK desta máquina depende do Android SDK; o workflow `.github/workflows/camera-remota.yml` tenta o mesmo comando. Não foi instalado em telefone.

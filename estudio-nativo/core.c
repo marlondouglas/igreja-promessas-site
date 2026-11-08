@@ -55,16 +55,24 @@ int args_contains(const ArgList *list, const char *text) {
 char *args_join(const ArgList *list) {
     size_t n = 1;
     int i;
-    char *out;
+    char *out, *p;
     if (!list) return NULL;
-    for (i = 0; i < list->count; i++) n += strlen(list->items[i]) + 1;
+    for (i = 0; i < list->count; i++) n += strlen(list->items[i]) * 2 + 3;
     out = (char *)malloc(n);
     if (!out) return NULL;
-    out[0] = 0;
+    p = out;
     for (i = 0; i < list->count; i++) {
-        if (i) strcat(out, " ");
-        strcat(out, list->items[i]);
+        const char *s = list->items[i];
+        int quote = !s[0] || strpbrk(s, " \t\"") != NULL;
+        if (i) *p++ = ' ';
+        if (quote) *p++ = '"';
+        for (; *s; s++) {
+            if (*s == '"') *p++ = '\\';
+            *p++ = *s;
+        }
+        if (quote) *p++ = '"';
     }
+    *p = 0;
     return out;
 }
 

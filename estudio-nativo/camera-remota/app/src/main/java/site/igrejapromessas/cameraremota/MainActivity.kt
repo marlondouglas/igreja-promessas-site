@@ -11,11 +11,11 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.pedro.rtmp.utils.ConnectCheckerRtmp
-import com.pedro.rtplibrary.rtmp.RtmpCamera2
-import com.pedro.rtplibrary.view.OpenGlView
+import com.pedro.common.ConnectChecker
+import com.pedro.library.rtmp.RtmpCamera2
+import com.pedro.library.view.OpenGlView
 
-class MainActivity : AppCompatActivity(), ConnectCheckerRtmp {
+class MainActivity : AppCompatActivity(), ConnectChecker {
     private lateinit var camera: RtmpCamera2
     private lateinit var status: TextView
     private lateinit var ip: EditText
@@ -34,7 +34,13 @@ class MainActivity : AppCompatActivity(), ConnectCheckerRtmp {
         findViewById<Button>(R.id.start).setOnClickListener { begin() }
         findViewById<Button>(R.id.stop).setOnClickListener { stopAll() }
         findViewById<Button>(R.id.switchCamera).setOnClickListener {
-            if (camera.isOnPreview || camera.isStreaming) camera.switchCamera()
+            if (camera.isOnPreview || camera.isStreaming) {
+                try {
+                    camera.switchCamera()
+                } catch (_: Exception) {
+                    status.text = "Não troquei a câmera."
+                }
+            }
         }
     }
 
@@ -75,16 +81,16 @@ class MainActivity : AppCompatActivity(), ConnectCheckerRtmp {
             ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
     }
 
-    override fun onConnectionStartedRtmp(url: String) {
+    override fun onConnectionStarted(url: String) {
         runOnUiThread { status.text = "Conectando ao caminho camera-remota." }
     }
 
-    override fun onConnectionSuccessRtmp() {
+    override fun onConnectionSuccess() {
         attempts = 0
         runOnUiThread { status.text = "Conectado. A imagem está chegando ao notebook." }
     }
 
-    override fun onConnectionFailedRtmp(reason: String) {
+    override fun onConnectionFailed(reason: String) {
         runOnUiThread {
             if (!wantStream) return@runOnUiThread
             attempts += 1
@@ -100,16 +106,16 @@ class MainActivity : AppCompatActivity(), ConnectCheckerRtmp {
         }
     }
 
-    override fun onNewBitrateRtmp(bitrate: Long) {}
+    override fun onNewBitrate(bitrate: Long) {}
 
-    override fun onDisconnectRtmp() {
+    override fun onDisconnect() {
         runOnUiThread { if (!wantStream) status.text = "Desconectado." }
     }
 
-    override fun onAuthErrorRtmp() {
+    override fun onAuthError() {
         wantStream = false
         runOnUiThread { status.text = "O servidor recusou a publicação. A autenticação não foi alterada." }
     }
 
-    override fun onAuthSuccessRtmp() {}
+    override fun onAuthSuccess() {}
 }

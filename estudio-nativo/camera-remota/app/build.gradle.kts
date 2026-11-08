@@ -28,6 +28,6 @@ android {
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("com.github.pedroSG94.RootEncoder:library:2.4.9")
+    implementation("com.github.pedroSG94.RootEncoder:library:2.6.0")
     testImplementation("junit:junit:4.13.2")
 }
