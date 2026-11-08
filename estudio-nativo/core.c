@@ -90,6 +90,34 @@ int url_encode(const char *in, char *out, size_t out_cap) {
     return 1;
 }
 
+int remote_path_allowed(const char *path) {
+    if (!path) return 0;
+    return strcmp(path, ESTUDIO_PATH_PHONE) == 0 || strcmp(path, ESTUDIO_PATH_PC) == 0;
+}
+
+int build_rtmp_url(char *out, size_t out_cap, const char *host, int port, const char *path, const char *key) {
+    char encoded[512];
+    if (!out || !host || !*host || !remote_path_allowed(path) || port < 1 || port > 65535) return 0;
+    if (strchr(host, '@') || strchr(host, ' ') || strchr(host, '/')) return 0;
+    if (key && *key) {
+        if (!url_encode(key, encoded, sizeof encoded)) return 0;
+        if ((size_t)snprintf(out, out_cap, "rtmp://%s:%s@%s:%d/%s", ESTUDIO_USER, encoded, host, port, path) >= out_cap)
+            return 0;
+    } else if ((size_t)snprintf(out, out_cap, "rtmp://%s:%d/%s", host, port, path) >= out_cap) {
+        return 0;
+    }
+    return 1;
+}
+
+LinkState link_from_ffmpeg_line(const char *line) {
+    if (!line || !*line) return LINK_CONNECTING;
+    if (strstr(line, "401") || strstr(line, "Unauthorized") || strstr(line, "auth")) return LINK_AUTH;
+    if (strstr(line, "Connection refused") || strstr(line, "Error opening") || strstr(line, "I/O error")
+        || strstr(line, "End of file") || strstr(line, "Connection timed out")) return LINK_DOWN;
+    if (strstr(line, "frame=") || strstr(line, "Output #0")) return LINK_UP;
+    return LINK_CONNECTING;
+}
+
 int build_rtsp_url(char *out, size_t out_cap, const char *host, int port, const char *key) {
     char encoded[512];
     if (!out || !host || !*host || port < 1 || port > 65535) return 0;
@@ -177,6 +205,11 @@ int publish_build(const PublishSpec *spec, ArgList *out, char *err, size_t err_c
             if (!args_push(out, "-f") || !args_push(out, "lavfi") || !args_push(out, "-i")
                 || !args_push(out, "anullsrc=r=48000:cl=stereo")) return 0;
         }
+        if (spec->overlay && !args_push(out, "-f") && !args_push(out, "rawvideo")) return 0;
+        if (spec->overlay && (!args_push(out, "-f") || !args_push(out, "rawvideo") || !args_push(out, "-pixel_format")
+            || !args_push(out, "bgra") || !args_push(out, "-video_size") || !args_push(out, "1280x720")
+            || !args_push(out, "-framerate") || !args_push(out, "12") || !args_push(out, "-i")
+            || !args_push(out, "pipe:0"))) return 0;
     } else if (spec->scene == SCENE_SCREEN) {
         if (!args_push(out, "-f") || !args_push(out, "gdigrab") || !args_push(out, "-framerate")
             || !args_push(out, "24") || !args_push(out, "-i") || !args_push(out, "desktop")) return 0;
@@ -187,10 +220,59 @@ int publish_build(const PublishSpec *spec, ArgList *out, char *err, size_t err_c
                 || !args_push(out, input)) return 0;
         } else if (!args_push(out, "-f") || !args_push(out, "lavfi") || !args_push(out, "-i")
             || !args_push(out, "anullsrc=r=48000:cl=stereo")) return 0;
+        if (spec->overlay && (!args_push(out, "-f") || !args_push(out, "rawvideo") || !args_push(out, "-pixel_format")
+            || !args_push(out, "bgra") || !args_push(out, "-video_size") || !args_push(out, "1280x720")
+            || !args_push(out, "-framerate") || !args_push(out, "12") || !args_push(out, "-i")
+            || !args_push(out, "pipe:0"))) return 0;
+    } else if (spec->scene == SCENE_PULL_PHONE || spec->scene == SCENE_PULL_PC) {
+        char pull[256];
+        const char *path = spec->scene == SCENE_PULL_PHONE ? ESTUDIO_PATH_PHONE : ESTUDIO_PATH_PC;
+        snprintf(pull, sizeof pull, "rtsp://127.0.0.1:8554/%s", path);
+        if (!args_push(out, "-rtsp_transport") || !args_push(out, "tcp") || !args_push(out, "-i") || !args_push(out, pull)
+            || !args_push(out, "-vf")
+            || !args_push(out, "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p"))
+            return 0;
+    } else if (spec->scene == SCENE_PUBLISH_PC) {
+        char url_in[768];
+        char input[400];
+        if (!spec->camera || !*spec->camera) {
+            if (err && err_cap) snprintf(err, err_cap, "Escolha a webcam.");
+            args_free(out);
+            return 0;
+        }
+        if (!build_rtmp_url(url_in, sizeof url_in, host, port ? port : 1935, ESTUDIO_PATH_PC, spec->key)) {
+            if (err && err_cap) snprintf(err, err_cap, "IP do notebook inválido.");
+            args_free(out);
+            return 0;
+        }
+        if (spec->mic && *spec->mic) snprintf(input, sizeof input, "video=%s:audio=%s", spec->camera, spec->mic);
+        else snprintf(input, sizeof input, "video=%s", spec->camera);
+        if (!args_push(out, "-f") || !args_push(out, "dshow") || !args_push(out, "-framerate") || !args_push(out, "24")
+            || !args_push(out, "-i") || !args_push(out, input)) return 0;
+        if (!spec->mic || !*spec->mic) {
+            if (!args_push(out, "-f") || !args_push(out, "lavfi") || !args_push(out, "-i")
+                || !args_push(out, "anullsrc=r=48000:cl=stereo")) return 0;
+        }
+        if (!push_encode(out) || !args_push(out, "-f") || !args_push(out, "flv") || !args_push(out, url_in)) {
+            args_free(out);
+            return 0;
+        }
+        return 1;
     } else {
         if (err && err_cap) snprintf(err, err_cap, "Cena desconhecida.");
         args_free(out);
         return 0;
+    }
+    if (spec->overlay && (spec->scene == SCENE_CAMERA || spec->scene == SCENE_SCREEN)) {
+        const char *graph = "[0:v]scale=1280:720,format=yuv420p[b];[1:v]format=bgra[o];[b][o]overlay=0:0:format=auto,format=yuv420p[v]";
+        const char *amap = (spec->scene == SCENE_CAMERA && spec->mic && *spec->mic) ? "0:a" : "1:a";
+        if (spec->scene == SCENE_SCREEN && spec->mic && *spec->mic) amap = "1:a";
+        if (spec->scene == SCENE_CAMERA && spec->overlay && spec->mic && *spec->mic) amap = "0:a";
+        if (!args_push(out, "-filter_complex") || !args_push(out, graph) || !args_push(out, "-map")
+            || !args_push(out, "[v]") || !args_push(out, "-map") || !args_push(out, amap)) {
+            args_free(out);
+            return 0;
+        }
     }
     if (!push_encode(out) || !push_tail(out, url)) {
         args_free(out);
@@ -215,14 +297,18 @@ char *redact_text(const char *text, const char *secret) {
             hit += secret_n;
         }
     }
-    hit = out;
-    while ((hit = strstr(hit, "rtsp://")) != NULL) {
-        char *at = strchr(hit, '@');
-        char *slash = strchr(hit + 7, '/');
-        if (at && slash && at < slash) {
-            memmove(hit + 7, at + 1, strlen(at + 1) + 1);
+    {
+        const char *schemes[] = {"rtsp://", "rtmp://"};
+        size_t s;
+        for (s = 0; s < 2; s++) {
+            hit = out;
+            while ((hit = strstr(hit, schemes[s])) != NULL) {
+                char *at = strchr(hit, '@');
+                char *slash = strchr(hit + 7, '/');
+                if (at && slash && at < slash) memmove(hit + 7, at + 1, strlen(at + 1) + 1);
+                hit += 7;
+            }
         }
-        hit += 7;
     }
     return out;
 }
@@ -296,6 +382,9 @@ const char *scene_label(SceneKind scene) {
     if (scene == SCENE_OPENING) return "Abertura";
     if (scene == SCENE_CAMERA) return "Câmera";
     if (scene == SCENE_SCREEN) return "Tela";
+    if (scene == SCENE_PULL_PHONE) return "Celular";
+    if (scene == SCENE_PULL_PC) return "Câmera do PC";
+    if (scene == SCENE_PUBLISH_PC) return "Enviando webcam";
     if (scene == SCENE_CLOSING) return "Encerramento";
     if (scene == SCENE_FINAL) return "Arte final";
     return "Em espera";
@@ -401,6 +490,242 @@ int key_restore(VaultUnprotectFn unprotect, const char *path, char *key, size_t 
     free(blob);
     free(plain);
     return 0;
+}
+
+void card_doc_init(CardDoc *doc) {
+    if (!doc) return;
+    memset(doc, 0, sizeof *doc);
+    memcpy(doc->type, "verse", 6);
+    memcpy(doc->heading, "PALAVRA DE DEUS", 16);
+    memcpy(doc->style, "gold", 5);
+    doc->place = CARD_LOWER;
+    doc->seconds = 20;
+    doc->transition_sound = 0;
+}
+
+int card_duration_ok(int seconds) {
+    return seconds > 0 && seconds <= 600;
+}
+
+void card_apply(const CardDoc *draft, CardLive *live, int now_ms) {
+    if (!draft || !live) return;
+    if (!card_duration_ok(draft->seconds) && draft->seconds != 0) return;
+    if (!draft->heading[0] && !draft->message[0]) return;
+    live->doc = *draft;
+    live->active = 1;
+    live->started_ms = now_ms;
+    live->until_ms = draft->seconds > 0 ? now_ms + draft->seconds * 1000 : 0;
+}
+
+void card_stop(CardLive *live, int now_ms) {
+    if (!live) return;
+    live->active = 0;
+    live->until_ms = now_ms;
+}
+
+static float fade(int now_ms, int started_ms, int until_ms, int active) {
+    const int intro = 450, outro = 450;
+    int held;
+    if (!active) {
+        held = now_ms - until_ms;
+        if (held < 0) return 0;
+        if (held >= outro) return 0;
+        return 1.f - (float)held / (float)outro;
+    }
+    held = now_ms - started_ms;
+    if (held < intro) return (float)held / (float)intro;
+    return 1.f;
+}
+
+void card_compose(const CardDoc *draft, const CardLive *live, int now_ms, int canvas_w, int canvas_h,
+                  CardView *preview, CardView *on_air) {
+    CardView blank;
+    int bw, bh, bx, by;
+    memset(&blank, 0, sizeof blank);
+    blank.layer = CARD_SERVICE;
+    blank.place = CARD_LOWER;
+    blank.alpha = 1.f;
+    if (canvas_w < 2) canvas_w = 1280;
+    if (canvas_h < 2) canvas_h = 720;
+    bw = canvas_w * 90 / 100;
+    bh = canvas_h * 16 / 100;
+    bx = (canvas_w - bw) / 2;
+    by = canvas_h - bh - canvas_h / 40;
+    blank.x = bx; blank.y = by; blank.w = bw; blank.h = bh;
+    if (preview) {
+        *preview = blank;
+        if (draft && (draft->heading[0] || draft->message[0] || draft->banner[0])) {
+            preview->layer = CARD_MESSAGE;
+            preview->place = draft->place;
+            preview->alpha = 1.f;
+            preview->ratio = banner_ratio(draft->banner_w, draft->banner_h);
+            if (draft->place == CARD_FULL) {
+                preview->x = canvas_w / 12; preview->y = canvas_h / 10;
+                preview->w = canvas_w - 2 * preview->x; preview->h = canvas_h - 2 * preview->y;
+            }
+            banner_contain(draft->banner_w, draft->banner_h, preview->w * 2 / 5, preview->h * 3 / 5,
+                           &preview->media_w, &preview->media_h);
+            preview->media_x = preview->x + preview->w - preview->media_w - 16;
+            preview->media_y = preview->y + (preview->h - preview->media_h) / 2;
+        }
+    }
+    if (!on_air) return;
+    *on_air = blank;
+    if (!live || (!live->active && now_ms - live->until_ms >= 450)) return;
+    on_air->layer = live->active || now_ms < live->until_ms + 450 ? CARD_MESSAGE : CARD_SERVICE;
+    if (!live->active && now_ms - live->until_ms >= 450) on_air->layer = CARD_SERVICE;
+    if (live->doc.heading[0] || live->doc.message[0] || live->doc.banner[0]) {
+        if (live->active || now_ms - live->until_ms < 450) {
+            on_air->layer = CARD_MESSAGE;
+            on_air->place = live->doc.place;
+            on_air->alpha = fade(now_ms, live->started_ms, live->active ? live->until_ms : live->until_ms, live->active);
+            if (live->doc.place == CARD_FULL) {
+                on_air->x = canvas_w / 12; on_air->y = canvas_h / 10;
+                on_air->w = canvas_w - 2 * on_air->x; on_air->h = canvas_h - 2 * on_air->y;
+            }
+            on_air->ratio = banner_ratio(live->doc.banner_w, live->doc.banner_h);
+            banner_contain(live->doc.banner_w, live->doc.banner_h, on_air->w * 2 / 5, on_air->h * 3 / 5,
+                           &on_air->media_w, &on_air->media_h);
+            on_air->media_x = on_air->x + on_air->w - on_air->media_w - 16;
+            on_air->media_y = on_air->y + (on_air->h - on_air->media_h) / 2;
+            if (!live->active && on_air->alpha <= 0.02f) {
+                *on_air = blank;
+                on_air->finished = 1;
+            }
+        }
+    }
+    if (live->active && live->until_ms && now_ms >= live->until_ms) on_air->finished = 1;
+}
+
+RatioClass banner_ratio(int w, int h) {
+    if (w < 1 || h < 1) return RATIO_WIDE;
+    if (w * 5 < h * 4) return RATIO_TALL;
+    if (h * 5 < w * 4) return RATIO_WIDE;
+    return RATIO_SQUARE;
+}
+
+void banner_contain(int img_w, int img_h, int box_w, int box_h, int *dw, int *dh) {
+    if (!dw || !dh) return;
+    *dw = 0; *dh = 0;
+    if (img_w < 1 || img_h < 1 || box_w < 1 || box_h < 1) return;
+    if (img_w * box_h > img_h * box_w) {
+        *dw = box_w;
+        *dh = box_w * img_h / img_w;
+    } else {
+        *dh = box_h;
+        *dw = box_h * img_w / img_h;
+    }
+    if (*dw < 1) *dw = 1;
+    if (*dh < 1) *dh = 1;
+}
+
+void audio_gains(const CardView *on_air, int music_on, int transition_sound, float *program, float *music, float *sting) {
+    float a = on_air && on_air->layer == CARD_MESSAGE ? on_air->alpha : 0.f;
+    if (program) *program = 1.f - 0.55f * a;
+    if (music) *music = music_on ? 0.35f * a : 0.f;
+    if (sting) *sting = transition_sound ? 0.2f * a * (1.f - a) * 4.f : 0.f;
+    if (sting && *sting > 0.2f) *sting = 0.2f;
+}
+
+void mix_s16(int16_t *dst, const int16_t *program, const int16_t *music, int samples, float program_gain, float music_gain) {
+    int i;
+    if (!dst || samples < 1) return;
+    for (i = 0; i < samples; i++) {
+        int v = 0;
+        if (program) v += (int)(program[i] * program_gain);
+        if (music) v += (int)(music[i] * music_gain);
+        if (v > 32767) v = 32767;
+        if (v < -32768) v = -32768;
+        dst[i] = (int16_t)v;
+    }
+}
+
+static void put_px(uint8_t *bgra, int w, int h, int x, int y, uint8_t b, uint8_t g, uint8_t r, uint8_t a) {
+    uint8_t *p;
+    if (x < 0 || y < 0 || x >= w || y >= h) return;
+    p = bgra + ((size_t)y * (size_t)w + (size_t)x) * 4;
+    p[0] = b; p[1] = g; p[2] = r; p[3] = a;
+}
+
+static void fill_rect(uint8_t *bgra, int w, int h, int x, int y, int rw, int rh, uint8_t b, uint8_t g, uint8_t r, uint8_t a) {
+    int yy, xx;
+    for (yy = 0; yy < rh; yy++) for (xx = 0; xx < rw; xx++) put_px(bgra, w, h, x + xx, y + yy, b, g, r, a);
+}
+
+static void blit_text(uint8_t *bgra, int w, int h, int x, int y, const char *text, uint8_t a) {
+    int col = 0;
+    if (!text) return;
+    for (; *text && col < 80; text++, col++) {
+        int gx, gy;
+        for (gy = 0; gy < 8; gy++) for (gx = 0; gx < 5; gx++) {
+            if (((*text + gx + gy) & 3) == 0) put_px(bgra, w, h, x + col * 6 + gx, y + gy, 232, 214, 168, a);
+        }
+    }
+}
+
+void render_card(uint8_t *bgra, int w, int h, const CardView *view, const CardDoc *doc) {
+    uint8_t a;
+    if (!bgra || w < 1 || h < 1) return;
+    memset(bgra, 0, (size_t)w * (size_t)h * 4);
+    if (!view || view->alpha <= 0.02f) return;
+    a = (uint8_t)(view->alpha * 230.f);
+    if (view->layer == CARD_SERVICE) {
+        fill_rect(bgra, w, h, view->x, view->y, view->w, view->h, 11, 19, 33, a);
+        fill_rect(bgra, w, h, view->x, view->y, 4, view->h, 229, 193, 138, a);
+        blit_text(bgra, w, h, view->x + 12, view->y + 8, "CULTO", a);
+        return;
+    }
+    if (view->place == CARD_FULL) fill_rect(bgra, w, h, 0, 0, w, h, 16, 23, 37, a);
+    fill_rect(bgra, w, h, view->x, view->y, view->w, view->h, 13, 20, 32, a);
+    fill_rect(bgra, w, h, view->x, view->y, 4, view->h, 229, 193, 138, a);
+    if (view->media_w > 0 && view->media_h > 0)
+        fill_rect(bgra, w, h, view->media_x, view->media_y, view->media_w, view->media_h, 255, 255, 255, a);
+    if (doc) {
+        blit_text(bgra, w, h, view->x + 12, view->y + 10, doc->heading, a);
+        blit_text(bgra, w, h, view->x + 12, view->y + 24, doc->message, a);
+        blit_text(bgra, w, h, view->x + 12, view->y + view->h - 16, doc->reference, a);
+    }
+}
+
+int card_settings_write(const char *path, const CardDoc *doc) {
+    FILE *f;
+    if (!path || !doc) return 0;
+    f = fopen(path, "wb");
+    if (!f) return 0;
+    fprintf(f, "type=%s\nheading=%s\nmessage=%s\nreference=%s\nbanner=%s\nplace=%d\nseconds=%d\nsound=%d\nstyle=%s\nbanner_w=%d\nbanner_h=%d\n",
+            doc->type, doc->heading, doc->message, doc->reference, doc->banner, (int)doc->place, doc->seconds,
+            doc->transition_sound, doc->style, doc->banner_w, doc->banner_h);
+    fclose(f);
+    return 1;
+}
+
+int card_settings_read(const char *text, CardDoc *doc, int *rejected_secret) {
+    const char *p;
+    if (rejected_secret) *rejected_secret = 0;
+    if (!text || !doc) return 0;
+    card_doc_init(doc);
+    for (p = text; *p; ) {
+        const char *eol = strchr(p, '\n');
+        char line[512];
+        size_t n = eol ? (size_t)(eol - p) : strlen(p);
+        if (n >= sizeof line) n = sizeof line - 1;
+        memcpy(line, p, n);
+        line[n] = 0;
+        if (strncmp(line, "senha=", 6) == 0 || strncmp(line, "password=", 9) == 0 || strncmp(line, "pix_key=", 8) == 0) {
+            if (rejected_secret) *rejected_secret = 1;
+        } else if (strncmp(line, "heading=", 8) == 0) snprintf(doc->heading, sizeof doc->heading, "%s", line + 8);
+        else if (strncmp(line, "message=", 8) == 0) snprintf(doc->message, sizeof doc->message, "%s", line + 8);
+        else if (strncmp(line, "reference=", 10) == 0) snprintf(doc->reference, sizeof doc->reference, "%s", line + 10);
+        else if (strncmp(line, "type=", 5) == 0) snprintf(doc->type, sizeof doc->type, "%s", line + 5);
+        else if (strncmp(line, "seconds=", 8) == 0) doc->seconds = atoi(line + 8);
+        else if (strncmp(line, "place=", 6) == 0) doc->place = atoi(line + 6) == 1 ? CARD_FULL : CARD_LOWER;
+        else if (strncmp(line, "sound=", 6) == 0) doc->transition_sound = atoi(line + 6) ? 1 : 0;
+        else if (strncmp(line, "banner_w=", 9) == 0) doc->banner_w = atoi(line + 9);
+        else if (strncmp(line, "banner_h=", 9) == 0) doc->banner_h = atoi(line + 9);
+        if (!eol) break;
+        p = eol + 1;
+    }
+    return 1;
 }
 
 #ifdef _WIN32

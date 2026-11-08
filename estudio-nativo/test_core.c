@@ -102,6 +102,34 @@ int main(void) {
     expect(key_blob_clear(path), "limpa arquivo");
     expect(key_restore(vault_test_unprotect, path, restored, sizeof restored) == 1, "ausente depois de limpar");
 
+    spec.scene = SCENE_PUBLISH_PC;
+    spec.camera = "Webcam";
+    spec.mic = NULL;
+    spec.host = "127.0.0.1";
+    spec.port = 1935;
+    spec.key = NULL;
+    expect(publish_build(&spec, &args, err, sizeof err), "publica webcam");
+    joined = args_join(&args);
+    expect(joined && strstr(joined, "rtmp://127.0.0.1:1935/camera-pc") != NULL, "caminho camera-pc");
+    expect(joined && strstr(joined, "culto-aac") == NULL, "webcam nao publica a saida final");
+    expect(joined && strstr(joined, "camera-remota") == NULL, "webcam nao usa o caminho do celular");
+    free(joined);
+    args_free(&args);
+    spec.scene = SCENE_PULL_PHONE;
+    spec.key = NULL;
+    expect(publish_build(&spec, &args, err, sizeof err), "estudio puxa celular");
+    joined = args_join(&args);
+    expect(joined && strstr(joined, "rtsp://127.0.0.1:8554/camera-remota") != NULL, "le camera-remota");
+    expect(joined && strstr(joined, "libx264") != NULL && strstr(joined, "/culto-aac") != NULL, "recodeia para a saida");
+    expect(joined && strstr(joined, "-c copy") == NULL, "nao repassa o celular cru");
+    free(joined);
+    args_free(&args);
+    expect(!build_rtmp_url(url, sizeof url, "127.0.0.1", 1935, "culto-aac", NULL), "rtmp recusa saida final");
+    expect(!build_rtmp_url(url, sizeof url, "", 1935, "camera-pc", NULL), "rtmp exige IP");
+    expect(link_from_ffmpeg_line("frame= 12 fps=24") == LINK_UP, "indicador sobe com quadro");
+    expect(link_from_ffmpeg_line("Connection refused") == LINK_DOWN, "indicador cai sem servidor");
+    expect(link_from_ffmpeg_line("") == LINK_CONNECTING, "ainda conectando");
+
     if (g_fail) {
         fprintf(stderr, "%d falhas\n", g_fail);
         return 1;

@@ -34,4 +34,14 @@ Coloque ao lado do exe, copiados da pasta do site, sem alterar a logo:
 
 Não rode este programa junto com `iniciar-relay-aac.ps1`: os dois publicam em `/culto-aac`. O WHIP do navegador em `/culto` pode continuar como reserva, sem ser ligado ao mesmo tempo que este envio.
 
-A contagem dura 10 s, a abertura 5 min (15 s no teste), a câmera fica até Encerrar, o encerramento 2 min (12 s no teste) e a arte final 18 s. Cada troca de cena encerra o ffmpeg e abre outro. Há um intervalo curto. O atraso de cerca de 20 s do player público não é uma espera inicial: o hls.js segura 20 s atrás da borda; no iPhone o player nativo só consegue ir até o fim da janela que o MediaMTX já guarda. Isso não foi medido no telefone nesta alteração. A marca menor está só no `drawLiveBrand` do vídeo do estúdio web, não no cabeçalho do site.
+A contagem dura 10 s, a abertura 5 min (15 s no teste), a câmera fica até Encerrar, o encerramento 2 min (12 s no teste) e a arte final 18 s. Cada troca de cena encerra o ffmpeg e abre outro. Há um intervalo curto.
+
+## Câmeras remotas
+
+O celular publica em `rtmp://IP-DO-NOTEBOOK:1935/camera-remota`. Outro PC, ou este mesmo em modo câmera, publica em `rtmp://IP:1935/camera-pc`. Nenhum dos dois grava em `/culto` nem em `/culto-aac`. O estúdio, com a opção Celular ou Outro PC, lê `rtsp://127.0.0.1:8554/` desse caminho e reencoda H.264 + AAC para `/culto-aac`. Não é uma cópia crua.
+
+O IP não vem preenchido. Neste notebook, digite `127.0.0.1`. Em outro aparelho, use o IP que o Windows mostrar na rede. A configuração do MediaMTX não foi alterada. Se o servidor recusar o caminho novo, o aviso aparece no programa; não se abre autenticação nem firewall daqui.
+
+Modo câmera deste PC: `EstudioPromessas.exe --camera`. O estado “Conectado” só aparece quando o ffmpeg informa quadro ou saída. Recusa e senha errada aparecem como falha.
+
+O app Android está em `camera-remota`. O comando é `gradle assembleDebug`. O APK desta máquina depende do Android SDK; o workflow `.github/workflows/camera-remota.yml` tenta o mesmo comando. Não foi instalado em telefone.

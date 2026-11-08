@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.CameraRemota" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">#12141A</item>
+        <item name="colorPrimary">#D9B477</item>
+        <item name="colorPrimaryDark">#12141A</item>
+        <item name="android:textColor">#F6F1E8</item>
+        <item name="android:statusBarColor">#12141A</item>
+    </style>
+</resources>

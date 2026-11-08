@@ -10,13 +10,13 @@
 
 enum {
     ID_TITLE = 100, ID_ADDRESS, ID_FMT_H, ID_FMT_V, ID_TEST,
-    ID_SRC_CAM, ID_SRC_SCR, ID_CAM, ID_MIC, ID_REFRESH,
+    ID_SRC_CAM, ID_SRC_SCR, ID_SRC_PHONE, ID_SRC_PC, ID_CAM, ID_MIC, ID_REFRESH,
     ID_KEY, ID_CHANGE, ID_CLEAR, ID_CHECK, ID_TRANSMIT,
-    ID_START, ID_SKIP, ID_END, ID_STOP, ID_LOG, ID_TIMER = 200
+    ID_START, ID_SKIP, ID_END, ID_STOP, ID_LOG, ID_IP = 180, ID_TIMER = 200
 };
 
 static HWND g_win, g_title, g_address, g_cam, g_mic, g_key, g_status, g_scene, g_clock, g_log, g_saved;
-static HWND g_fmt_h, g_fmt_v, g_src_cam, g_src_scr, g_test, g_start;
+static HWND g_fmt_h, g_fmt_v, g_src_cam, g_src_scr, g_src_phone, g_src_pc, g_test, g_start;
 static char g_keybuf[256];
 static int g_have_key;
 static wchar_t g_keypath[MAX_PATH];
@@ -24,6 +24,10 @@ static HANDLE g_proc;
 static SceneKind g_scene_kind;
 static ULONGLONG g_scene_start;
 static int g_running;
+static int g_companion;
+static char g_host[64];
+static HANDLE g_err_rd;
+static HWND g_ip;
 static char g_camera_name[160], g_mic_name[160];
 static char g_open_file[MAX_PATH], g_close_file[MAX_PATH], g_final_file[MAX_PATH];
 
@@ -242,8 +246,8 @@ static int start_scene(SceneKind scene) {
     spec.test_mode = (int)SendMessageW(g_test, BM_GETCHECK, 0, 0) == BST_CHECKED;
     spec.camera = g_camera_name;
     spec.mic = g_mic_name;
-    spec.host = "127.0.0.1";
-    spec.port = 8554;
+    spec.host = g_companion && g_host[0] ? g_host : "127.0.0.1";
+    spec.port = g_companion ? 1935 : 8554;
     spec.key = key;
     if (scene == SCENE_OPENING) spec.media = g_open_file;
     else if (scene == SCENE_CLOSING) spec.media = g_close_file;
@@ -253,9 +257,12 @@ static int start_scene(SceneKind scene) {
         spec.scene = SCENE_SCREEN;
     selected_name(g_cam, g_camera_name, sizeof g_camera_name);
     selected_name(g_mic, g_mic_name, sizeof g_mic_name);
-    spec.camera = g_camera_name;
-    spec.mic = g_mic_name;
-    if (!publish_build(&spec, &args, err, sizeof err)) {
+        spec.camera = g_camera_name;
+        spec.mic = g_mic_name;
+        if (!g_companion && scene == SCENE_CAMERA && g_src_phone && SendMessageW(g_src_phone, BM_GETCHECK, 0, 0) == BST_CHECKED) spec.scene = SCENE_PULL_PHONE;
+        if (!g_companion && scene == SCENE_CAMERA && g_src_pc && SendMessageW(g_src_pc, BM_GETCHECK, 0, 0) == BST_CHECKED) spec.scene = SCENE_PULL_PC;
+        if (g_companion) spec.scene = SCENE_PUBLISH_PC;
+        if (!publish_build(&spec, &args, err, sizeof err)) {
         wchar_t w[200];
         MultiByteToWideChar(CP_UTF8, 0, err, -1, w, 200);
         set_status(w);
@@ -278,10 +285,23 @@ static int start_scene(SceneKind scene) {
     si.cb = sizeof si;
     si.dwFlags = STARTF_USESHOWWINDOW;
     si.wShowWindow = SW_HIDE;
-    if (!CreateProcessW(NULL, cmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
-        secure_wipe(cmd, sizeof cmd);
-        set_status(L"Não iniciei o ffmpeg. Verifique se ele está no PATH.");
-        return 0;
+    {
+        SECURITY_ATTRIBUTES sa = {sizeof(sa), NULL, TRUE};
+        HANDLE wr = NULL;
+        if (g_err_rd) { CloseHandle(g_err_rd); g_err_rd = NULL; }
+        if (CreatePipe(&g_err_rd, &wr, &sa, 0)) {
+            SetHandleInformation(g_err_rd, HANDLE_FLAG_INHERIT, 0);
+            si.dwFlags |= STARTF_USESTDHANDLES;
+            si.hStdError = wr;
+            si.hStdOutput = wr;
+        }
+        if (!CreateProcessW(NULL, cmd, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+            secure_wipe(cmd, sizeof cmd);
+            if (wr) CloseHandle(wr);
+            set_status(L"Não iniciei o ffmpeg. Verifique se ele está no PATH.");
+            return 0;
+        }
+        if (wr) CloseHandle(wr);
     }
     secure_wipe(cmd, sizeof cmd);
     CloseHandle(pi.hThread);
@@ -294,7 +314,7 @@ static int start_scene(SceneKind scene) {
         MultiByteToWideChar(CP_UTF8, 0, scene_label(spec.scene), -1, label, 64);
         SetWindowTextW(g_scene, label);
     }
-    set_status(L"Publicando H.264 + AAC em /culto-aac. O NO AR só aparece se o HLS responder.");
+    set_status(g_companion ? L"Conectando ao MediaMTX. Ainda não está no ar." : L"Publicando H.264 + AAC em /culto-aac. O NO AR só aparece se o HLS responder.");
     return 1;
 }
 
@@ -347,6 +367,18 @@ static void advance_scene(void) {
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
     case WM_CREATE:
+        if (g_companion) {
+            g_cam = CreateWindowW(L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, 24, 70, 320, 200, hwnd, (HMENU)ID_CAM, NULL, NULL);
+            g_mic = CreateWindowW(L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, 24, 140, 320, 200, hwnd, (HMENU)ID_MIC, NULL, NULL);
+            g_ip = CreateWindowW(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 24, 210, 320, 28, hwnd, (HMENU)ID_IP, NULL, NULL);
+            g_start = CreateWindowW(L"BUTTON", L"Iniciar envio", WS_CHILD | WS_VISIBLE, 24, 260, 150, 36, hwnd, (HMENU)ID_START, NULL, NULL);
+            CreateWindowW(L"BUTTON", L"Parar", WS_CHILD | WS_VISIBLE, 184, 260, 120, 36, hwnd, (HMENU)ID_STOP, NULL, NULL);
+            g_status = CreateWindowW(L"STATIC", L"Informe o IP do notebook. Neste mesmo PC use 127.0.0.1.", WS_CHILD | WS_VISIBLE, 24, 310, 420, 48, hwnd, NULL, NULL, NULL);
+            g_log = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_READONLY | WS_VSCROLL, 24, 370, 420, 160, hwnd, (HMENU)ID_LOG, NULL, NULL);
+            g_scene = g_status;
+            SetTimer(hwnd, ID_TIMER, 1000, NULL);
+            return 0;
+        }
         g_title = CreateWindowW(L"EDIT", L"Culto da Família", WS_CHILD | WS_VISIBLE | WS_BORDER, 0, 0, 10, 10, hwnd, (HMENU)ID_TITLE, NULL, NULL);
         g_address = CreateWindowW(L"EDIT", L"Rua Pascoal de Souza Lima, 507 — Santa Terezinha, Governador Valadares — MG", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_MULTILINE, 0, 0, 10, 10, hwnd, (HMENU)ID_ADDRESS, NULL, NULL);
         g_fmt_h = CreateWindowW(L"BUTTON", L"Deitado  16:9", WS_CHILD | WS_VISIBLE | BS_AUTORADIOBUTTON | WS_GROUP, 0, 0, 10, 10, hwnd, (HMENU)ID_FMT_H, NULL, NULL);
@@ -354,6 +386,8 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         g_test = CreateWindowW(L"BUTTON", L"Modo de teste (abertura acelerada)", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 0, 0, 10, 10, hwnd, (HMENU)ID_TEST, NULL, NULL);
         g_src_cam = CreateWindowW(L"BUTTON", L"Câmera", WS_CHILD | WS_VISIBLE | BS_AUTORADIOBUTTON | WS_GROUP, 0, 0, 10, 10, hwnd, (HMENU)ID_SRC_CAM, NULL, NULL);
         g_src_scr = CreateWindowW(L"BUTTON", L"Tela", WS_CHILD | WS_VISIBLE | BS_AUTORADIOBUTTON, 0, 0, 10, 10, hwnd, (HMENU)ID_SRC_SCR, NULL, NULL);
+        g_src_phone = CreateWindowW(L"BUTTON", L"Celular (camera-remota)", WS_CHILD | WS_VISIBLE | BS_AUTORADIOBUTTON, 0, 0, 10, 10, hwnd, (HMENU)ID_SRC_PHONE, NULL, NULL);
+        g_src_pc = CreateWindowW(L"BUTTON", L"Outro PC (camera-pc)", WS_CHILD | WS_VISIBLE | BS_AUTORADIOBUTTON, 0, 0, 10, 10, hwnd, (HMENU)ID_SRC_PC, NULL, NULL);
         g_cam = CreateWindowW(L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, 0, 0, 10, 200, hwnd, (HMENU)ID_CAM, NULL, NULL);
         g_mic = CreateWindowW(L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, 0, 0, 10, 200, hwnd, (HMENU)ID_MIC, NULL, NULL);
         CreateWindowW(L"BUTTON", L"Atualizar dispositivos", WS_CHILD | WS_VISIBLE, 0, 0, 10, 10, hwnd, (HMENU)ID_REFRESH, NULL, NULL);
@@ -377,6 +411,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         return 0;
     case WM_SIZE: {
         int w = LOWORD(lp), h = HIWORD(lp);
+        if (g_companion) return 0;
         int left = 24, col = 460, y = 24, x = left;
         if (w < 900) w = 900;
         MoveWindow(g_title, x, y, col - 40, 28, TRUE);
@@ -384,8 +419,10 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         MoveWindow(g_fmt_h, x, y + 130, 160, 28, TRUE);
         MoveWindow(g_fmt_v, x + 170, y + 130, 140, 28, TRUE);
         MoveWindow(g_test, x, y + 168, 280, 24, TRUE);
-        MoveWindow(g_src_cam, x, y + 210, 120, 28, TRUE);
-        MoveWindow(g_src_scr, x + 130, y + 210, 120, 28, TRUE);
+        MoveWindow(g_src_cam, x, y + 210, 100, 28, TRUE);
+        MoveWindow(g_src_scr, x + 100, y + 210, 80, 28, TRUE);
+        MoveWindow(g_src_phone, x + 180, y + 210, 180, 28, TRUE);
+        MoveWindow(g_src_pc, x, y + 240, 200, 28, TRUE);
         MoveWindow(g_cam, x, y + 250, col - 40, 200, TRUE);
         MoveWindow(g_mic, x, y + 290, col - 40, 200, TRUE);
         MoveWindow(GetDlgItem(hwnd, ID_REFRESH), x, y + 330, 200, 30, TRUE);
@@ -407,6 +444,25 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         return 0;
     }
     case WM_TIMER:
+        if (g_err_rd) {
+            DWORD avail = 0;
+            char chunk[700];
+            if (PeekNamedPipe(g_err_rd, NULL, 0, NULL, &avail, NULL) && avail) {
+                DWORD n = 0;
+                if (avail > sizeof chunk - 1) avail = (DWORD)sizeof chunk - 1;
+                if (ReadFile(g_err_rd, chunk, avail, &n, NULL) && n) {
+                    LinkState st;
+                    char *safe;
+                    chunk[n] = 0;
+                    st = link_from_ffmpeg_line(chunk);
+                    safe = redact_text(chunk, g_have_key ? g_keybuf : NULL);
+                    if (safe) { log_line(safe); free(safe); }
+                    if (st == LINK_UP) set_status(L"Conectado. Há quadros saindo.");
+                    else if (st == LINK_AUTH) set_status(L"O servidor recusou a senha.");
+                    else if (st == LINK_DOWN) set_status(L"Sem conexão. Confira o IP, a porta 1935 e se o MediaMTX está no ar.");
+                }
+            }
+        }
         if (g_running) {
             ULONGLONG sec = (GetTickCount64() - g_scene_start) / 1000;
             wchar_t clock[16];
@@ -423,7 +479,18 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         case ID_CLEAR: on_clear_key(); break;
         case ID_CHECK: poll_health(); if (!g_running) set_status(L"Sem envio ativo. O servidor só confirma NO AR depois do ffmpeg publicar."); break;
         case ID_TRANSMIT:
-        case ID_START: start_scene(SCENE_COUNTDOWN); break;
+        case ID_START:
+            if (g_companion) {
+                char ip[64];
+                GetWindowTextA(g_ip, ip, 64);
+                if (!ip[0] || strchr(ip, ' ') || strchr(ip, '@')) {
+                    set_status(L"Informe só o IP do notebook, sem senha. Neste PC: 127.0.0.1.");
+                    break;
+                }
+                snprintf(g_host, sizeof g_host, "%s", ip);
+                start_scene(SCENE_PUBLISH_PC);
+            } else start_scene(SCENE_COUNTDOWN);
+            break;
         case ID_SKIP: if (g_running) start_scene(SCENE_CAMERA); break;
         case ID_END: if (g_running) start_scene(SCENE_CLOSING); break;
         case ID_STOP: stop_ffmpeg(); SetWindowTextW(g_scene, L"EM ESPERA"); set_status(L"Envio parado. O MediaMTX não foi reiniciado."); break;
@@ -443,7 +510,8 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, wchar_t *cmd, int show) {
     WNDCLASSW wc;
     MSG msg;
-    (void)prev; (void)cmd;
+    (void)prev;
+    g_companion = cmd && wcsstr(cmd, L"--camera") != NULL;
     key_file();
     ZeroMemory(&wc, sizeof wc);
     wc.lpfnWndProc = WndProc;
@@ -452,10 +520,11 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, wchar_t *cmd, int show) {
     wc.hbrBackground = CreateSolidBrush(RGB(18, 20, 26));
     wc.lpszClassName = L"EstudioPromessas";
     RegisterClassW(&wc);
-    g_win = CreateWindowExW(0, L"EstudioPromessas", L"Igreja Promessas — Central de Transmissão",
-        WS_OVERLAPPEDWINDOW | WS_VISIBLE, 40, 30, 1280, 820, NULL, NULL, inst, NULL);
+    g_win = CreateWindowExW(0, L"EstudioPromessas",
+        g_companion ? L"Igreja Promessas — Câmera deste PC" : L"Igreja Promessas — Central de Transmissão",
+        WS_OVERLAPPEDWINDOW | WS_VISIBLE, 40, 30, g_companion ? 520 : 1280, g_companion ? 620 : 820, NULL, NULL, inst, NULL);
     load_key();
-    load_assets();
+    if (!g_companion) load_assets();
     refresh_devices();
     ShowWindow(g_win, show);
     while (GetMessageW(&msg, NULL, 0, 0)) {
