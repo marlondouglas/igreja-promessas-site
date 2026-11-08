@@ -813,22 +813,17 @@
    ctx.lineCap="round";ctx.strokeStyle="#eec88d";ctx.stroke();
  }
  function drawWaiting(t){
-   const w=canvas.width,h=canvas.height,v=format==="vertical";
-   background(t);topMark();
-   logoAt(w/2,h*(v?.36:.37),Math.min(w*.27,h*.25));
-   text("CENTRAL DE TRANSMISSÃO",w/2,h*(v?.57:.65),v?28:42,"#fff4df",800,"center",w*.95);
-   text("Prévia local • aguarde a abertura",w/2,h*(v?.62:.72),v?18:23,"#d8bf95",600,"center",w*.91);
-   text(motto,w/2,h*(v?.81:.85),v?17:21,"#b2a99c",600,"center",w*.91);
+   // A mesma arte oficial do site aparece antes e depois de cada transmissao.
+   drawDone(t);
  }
  function drawCountdown(t){
-   const w=canvas.width,h=canvas.height,v=format==="vertical";
-   background(t);topMark();
-   const n=Math.max(1,Math.ceil(10-t)),cy=h*(v?.47:.49),r=Math.min(w,h)*(v?.23:.27);
-   progress(w/2,cy,r,t/10);
-   text(String(n),w/2,cy,Math.min(w*.27,h*.27),"#fff4df",800);
-   text("A APRESENTAÇÃO COMEÇA EM",w/2,cy-r-50,v?20:25,"#e0c18e",800,"center",w*.88);
-   text("Toque em cancelar para interromper",w/2,cy+r+43,v?17:19,"#dfd9cf",500,"center",w*.90);
-   text(motto,w/2,h*.89,v?16:20,"#b3a99b",600,"center",w*.90);
+   // Somente os segundos regressivos na tela: sem logo, titulo, tarja ou textos.
+   // Nao altera os videos R5, que incluem audio e narracao originais.
+   const w=canvas.width,h=canvas.height;
+   ctx.fillStyle="#101010";
+   ctx.fillRect(0,0,w,h);
+   const n=Math.max(1,Math.ceil(10-t));
+   text(String(n),w/2,h/2,Math.min(w*.32,h*.31),"#fff7e7",800);
  }
  function drawFilm(film,label){
    const w=canvas.width,h=canvas.height;
