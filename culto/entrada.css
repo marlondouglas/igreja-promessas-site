@@ -1,0 +1,12 @@
+/* Igreja Promessas: entrada pública das transmissões — sem indicar live falsa. */
+.nav-live-entry{font-weight:850!important;color:#f3cf91!important}
+.promessas-live-home{background:linear-gradient(110deg,#141923,#282230 62%,#302422);border-top:1px solid #d3a97059;border-bottom:1px solid #b68c5a4a;padding:34px 0}
+.promessas-live-inner{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.promessas-live-icon{display:grid;place-items:center;width:90px;height:90px;border-radius:21px;background:#1c222d;border:1px solid #ddbd7955;flex-shrink:0}
+.promessas-live-icon img{width:61px;height:61px}
+.promessas-live-copy{flex:1}.promessas-live-label{color:#e6c58e;font-size:10px;font-weight:800;letter-spacing:.15em}
+.promessas-live-copy h2{font-size:clamp(24px,3vw,34px);color:#fff1d8;letter-spacing:-.035em;margin:4px 0}.promessas-live-copy h2 em{font-style:normal;color:#e6bf8a}
+.promessas-live-copy p{font-size:13px;color:#c6b9b1;line-height:1.6;margin:0;max-width:650px}
+.promessas-live-action{background:#dfba82;color:#211b20!important;border-radius:12px;font-size:12px;font-weight:850;padding:14px 18px;white-space:nowrap}
+.promessas-live-action:hover{filter:brightness(1.1)}
+@media(max-width:700px){.promessas-live-home{padding:25px 0}.promessas-live-inner{display:grid;grid-template-columns:66px 1fr;gap:13px}.promessas-live-icon{width:60px;height:60px;border-radius:13px}.promessas-live-icon img{width:39px;height:39px}.promessas-live-copy h2{font-size:23px}.promessas-live-copy p{font-size:12px}.promessas-live-action{grid-column:1/-1;text-align:center}}

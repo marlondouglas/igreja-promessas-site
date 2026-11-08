@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0e16">
+<meta name="description" content="Estúdio de produção da Igreja Ministério Promessas. Prévia e ensaio de cultos com abertura, câmera e encerramento.">
+<title>Central de Transmissão | Igreja Promessas</title>
+<link rel="icon" href="/logo-promessas.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/culto/studio.css?v=1108cards">
+<script defer src="/culto/studio.js?v=1108cards"></script>
+</head>
+<body class="studio-body">
+<header class="studio-header">
+ <a class="studio-brand" href="/" aria-label="Site Igreja Promessas"><img src="/logo-promessas.svg" alt=""><span><strong>IGREJA PROMESSAS</strong><small>CENTRAL DE TRANSMISSÃO</small></span></a>
+ <div class="header-right"><span class="status-live" id="studio-badge">● ENSAIO LOCAL</span><a class="outline-link" href="/culto/" target="_blank" rel="noopener">Página do público <span aria-hidden="true">↗</span></a></div>
+</header>
+<main class="studio-main">
+ <div class="head-intro"><div><p class="kicker">PRODUÇÃO DE CULTOS <span aria-hidden="true">✦</span> MINISTÉRIO PROMESSAS</p><h1>Sua igreja. <em>Sua transmissão.</em></h1><p>Configure as cenas, confira o enquadramento e ensaie a abertura, o culto e o encerramento.</p></div><p class="honesty"><span>ℹ</span> <strong>MODO DE ENSAIO</strong> — o vídeo não é enviado aos espectadores por esta página. Para uma live pública, use um encoder conectado à plataforma de transmissão.</p></div>
+ <div class="studio-grid">
+  <section class="settings card" aria-labelledby="settings-title">
+    <div class="card-top"><div><span class="eyebrow">01 · CONFIGURAÇÃO</span><h2 id="settings-title">Preparar o culto</h2></div><span class="tiny-chip">Tudo em um só lugar</span></div>
+    <label for="service-name">Título da transmissão</label><input id="service-name" type="text" value="Culto da Família" maxlength="75" autocomplete="off">
+    <label for="address">Endereço que aparece na tarja</label><textarea id="address" rows="2" maxlength="145">Rua Pascoal de Souza Lima, 507 — Santa Terezinha, Governador Valadares — MG</textarea>
+    <div class="settings-heading"><span>Formato do vídeo</span><small>Defina antes de começar</small></div>
+    <div class="format-choice" role="group" aria-label="Orientação da transmissão">
+     <button id="format-vertical" type="button" class="format-option" data-format="vertical" aria-pressed="false"><span class="format-symbol mobile-outline" aria-hidden="true"></span><strong>Em pé</strong><small>9:16 · Vertical</small></button>
+     <button id="format-horizontal" type="button" class="format-option selected" data-format="horizontal" aria-pressed="true"><span class="format-symbol wide-outline" aria-hidden="true"></span><strong>Deitado</strong><small>16:9 · Horizontal</small></button>
+    </div>
+    <div class="phone-tip"><span>☾</span><p><strong>Gravando pelo celular?</strong> Ative o modo <b>Não Perturbe</b> antes do culto, carregue o aparelho e coloque-o na orientação escolhida.</p></div>
+    <div class="settings-line"><label class="checkline"><input id="test-mode" type="checkbox"> <span>Modo de teste (abertura acelerada)</span></label><span class="tiny-chip">Prévia</span></div>
+    <p class="small-description">Tempo normal: preparação de <strong>10 segundos</strong> + abertura de <strong>5 minutos</strong>. No teste a abertura dura 15 segundos e pode ser adiantada.</p>
+    <div class="scene-timeline" aria-label="Sequência das cenas"><div><strong>01</strong><span>10s<br><small>Contagem</small></span></div><div><strong>02</strong><span>5min<br><small>Abertura</small></span></div><div><strong>03</strong><span>LIVE<br><small>Câmera</small></span></div><div><strong>04</strong><span>SAÍDA<br><small>Créditos</small></span></div></div>
+    <button id="prepare-camera" class="camera-button" type="button">◉ Preparar câmera e microfone</button>
+    <p class="camera-note" id="camera-note" role="status">O navegador pedirá autorização apenas quando você preparar a câmera. Nada é enviado a um servidor.</p>
+  </section>
+  <section class="preview-column">
+   <div class="card player-panel"><div class="preview-heading"><div><span class="eyebrow">02 · MONITOR DE PROGRAMAÇÃO</span><h2>Saída de vídeo <span class="preview-portrait-label" id="format-label">16:9 • Horizontal</span></h2></div><span id="scene-status" class="scene-status">EM ESPERA</span></div>
+    <div class="preview-holder"><div class="preview-box" id="preview-box" data-format="horizontal"><canvas id="program-canvas" width="1280" height="720" aria-label="Prévia do vídeo da transmissão, com abertura e cenas"></canvas><div class="preview-loading" id="preview-loading">Carregando identidade visual…</div></div></div>
+    <div class="camera-tips"><span id="current-scene">Cena: Aguardando</span><span id="timer-label">00:00</span></div>
+    <div class="controlbar">
+      <button id="start" type="button" class="start-button">▶ Iniciar apresentação</button>
+      <button id="cancel" type="button" class="control secondary" hidden>✕ Cancelar</button>
+      <button id="skip-intro" type="button" class="control secondary" hidden>⏭ Adiantar abertura</button>
+      <button id="pause" type="button" class="control secondary" disabled>Ⅱ Pausar</button>
+      <button id="resume" type="button" class="control secondary" hidden>▶ Retomar</button>
+      <button id="end" type="button" class="control danger" disabled>■ Encerrar</button>
+      <button id="skip-outro" type="button" class="control secondary" hidden>⏭ Finalizar créditos</button>
+    </div>
+    <div class="toolsbar"><button id="fullscreen" type="button">⛶ Tela cheia da saída</button><button id="save-clip" type="button">● Gravar prévia</button><button id="stop-clip" type="button" hidden>■ Salvar gravação</button><span id="record-status" role="status">Sem gravação local</span></div>
+    <div class="stream-notice" id="stream-notice" role="status">A apresentação está em modo de ensaio local. A abertura e os efeitos serão renderizados nesta tela.</div>
+   </div>
+   <section class="card overlay-editor" aria-labelledby="overlay-heading">
+    <div class="card-top"><div><span class="eyebrow">03 · CARDS E INFORMAÇÕES</span><h2 id="overlay-heading">Mensagens sobre o vídeo</h2></div><span class="tiny-chip">Personalizável</span></div>
+    <p class="overlay-help">Mostre versículos, avisos, oração e eventos em um card animado, sem cortar a imagem do culto.</p>
+    <div class="overlay-fields">
+     <div><label for="card-type">Tipo de card</label><select id="card-type"><option value="verse">📖 Versículo bíblico</option><option value="notice">📢 Aviso da igreja</option><option value="prayer">🙏 Pedido de oração</option><option value="event">✦ Próximo culto ou evento</option></select></div>
+     <div><label for="card-position">Posição na tela</label><select id="card-position"><option value="upper">Parte superior</option><option value="middle">Centro</option><option value="lower" selected>Acima da tarja</option></select></div>
+     <div class="overlay-wide"><label for="card-heading">Título do card</label><input id="card-heading" maxlength="65" type="text" value="PALAVRA DE DEUS" placeholder="Ex.: Palavra de Deus"></div>
+     <div class="overlay-wide"><label for="card-message">Texto bíblico ou informação</label><textarea id="card-message" rows="3" maxlength="380" placeholder="Digite aqui a mensagem para aparecer no vídeo.">O Senhor é o meu pastor; nada me faltará.</textarea></div>
+     <div><label for="card-reference">Referência ou complemento</label><input id="card-reference" maxlength="80" type="text" value="Salmo 23:1" placeholder="Ex.: João 3:16"></div>
+     <div><label for="card-duration">Tempo de exibição</label><select id="card-duration"><option value="0">Até eu ocultar</option><option value="10">10 segundos</option><option value="20" selected>20 segundos</option><option value="45">45 segundos</option><option value="90">1 minuto e meio</option></select></div>
+     <div><label for="card-style">Cores do card</label><select id="card-style"><option value="gold">✦ Dourado Promessas</option><option value="purple">✦ Lilás e roxo</option><option value="blue">✦ Azul profundo</option></select></div>
+    </div>
+    <div class="overlay-buttons"><button id="card-show" class="start-button" type="button">✦ Exibir card na imagem</button><button id="card-hide" class="control secondary" type="button" disabled>Ocultar card</button></div>
+    <p class="overlay-feedback" id="card-feedback" role="status" aria-live="polite">Edite o conteúdo, clique em “Exibir card” e veja no monitor. Durante a live, ele aparece na imagem da câmera.</p>
+    <p class="overlay-disclaimer">O card faz parte da imagem da prévia gravada. No site público, só aparecerá se a saída do Studio estiver conectada a uma transmissão real.</p>
+   </section>
+   <div class="card guidance"><div><span class="eyebrow">04 · PRODUÇÃO</span><h2>O que verá quem assiste?</h2></div><div class="guidance-grid"><div><span class="guide-emoji">✧</span><strong>Abertura original</strong><p>Logo animada, mensagens de boas-vindas, música instrumental original e contagem de 5 minutos.</p></div><div><span class="guide-emoji">▤</span><strong>Identidade do culto</strong><p>Tarja elegante com logo, nome do culto e endereço, adequada ao formato escolhido.</p></div><div><span class="guide-emoji">↺</span><strong>Sem cortes secos</strong><p>Pausa e encerramento com cenas próprias. A saída final agradece e apresenta o site e o aplicativo.</p></div></div></div>
+  </section>
+ </div>
+ <section class="card output-help" aria-labelledby="broadcast-title">
+ <div class="card-top"><div><span class="eyebrow">04 · TRANSMISSÃO PELO NOTEBOOK</span><h2 id="broadcast-title">Servidor da Igreja Promessas</h2></div><span class="needs-connect" id="server-badge">TESTE LOCAL</span></div>
+ <p><strong>O notebook está preparado para receber o sinal da Central.</strong> Para começar, ative o envio ao servidor e informe a senha privada da igreja. O servidor está limitado ao próprio notebook; ainda não há acesso público pela internet.</p>
+ <div class="settings-line"><label class="checkline"><input id="publish-enabled" type="checkbox"><span>Enviar o vídeo composto ao servidor do notebook</span></label></div>
+ <div class="publishing-row">
+  <div class="input-group"><label for="whip-url">Endereço WHIP do notebook</label><input id="whip-url" type="url" value="http://127.0.0.1:8889/culto/whip" spellcheck="false" autocomplete="off"><small>Endereço local para o teste no Chrome do notebook. Para celular e público será necessário HTTPS e configuração de rede.</small></div>
+  <div class="input-group smaller"><label for="publish-secret">Senha privada de transmissão</label><input id="publish-secret" type="password" placeholder="Senha em CHAVE-DO-ESTUDIO.txt" autocomplete="off"><small>Arquivo privado na pasta Igreja-Promessas-Live-Server do notebook. A senha não é salva no site.</small></div>
+ </div>
+ <div class="publishing-actions"><button id="test-server" type="button" class="link-button">Verificar servidor</button><a class="control secondary" href="http://127.0.0.1:8889/culto" target="_blank" rel="noopener noreferrer">Ver sinal local ↗</a><a class="control secondary" href="/culto/" target="_blank" rel="noopener">Ver página do público ↗</a></div>
+ <p id="publish-status" role="status">Ensaio local: o envio ao notebook está desativado.</p>
+ <p class="fineprint"><strong>O que já funciona:</strong> composição das cenas, câmera, microfone, transmissão via WHIP para o servidor local, pausa e encerramento. <strong>O que falta:</strong> domínio HTTPS da transmissão e conexão externa para que todas as pessoas possam assistir pelo aplicativo de qualquer lugar. Não marque como “ao vivo” até esse teste público ser concluído.</p>
+</section>
+</main>
+<footer class="studio-footer"><span>IGREJA MINISTÉRIO PROMESSAS · CENTRAL DE PRODUÇÃO</span><span>Resgatar almas e restaurar famílias · <a href="/">igrejapromessas.site</a></span></footer>
+<audio id="music-bed" src="/culto/assets/abertura-original.mp3" preload="none" loop></audio>
+</body></html>
