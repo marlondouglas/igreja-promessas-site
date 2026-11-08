@@ -1,0 +1,13 @@
+/* Reprodução contínua de louvores, sem seletores de músicas. */
+.home-radio-controls audio#promessas-radio,
+.listening audio#promessas-radio{display:none!important}
+.home-radio-live{font-size:10px;letter-spacing:.05em}
+.radio-partner-note{font:600 11px/1.5 "DM Sans","Segoe UI",sans-serif;color:#b9ab9b;margin:8px 0;max-width:500px}
+.radio-partner-note a{color:#f1d3a0;text-decoration:underline;text-underline-offset:3px}
+.listening .radio-partner-note{font-size:13px;margin:10px auto 20px;max-width:620px;text-align:center}
+.player-note{max-width:620px;margin-left:auto;margin-right:auto}
+@media(max-width:600px){.radio-partner-note{font-size:10px}.listening .radio-partner-note{font-size:11px}}
+
+/* Mantém o player dentro da largura em celulares e WebViews. */
+html,body{max-width:100%;overflow-x:clip}
+html,body{max-width:100%;overflow-x:clip}
