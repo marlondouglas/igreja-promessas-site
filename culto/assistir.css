@@ -50,3 +50,6 @@ footer>div{display:flex;align-items:center;gap:12px}footer img{width:29px}
 .watch-hero>p:last-child{max-width:580px;margin:0 auto}
 .studio-private-link{display:none!important}
 @media(max-width:670px){.watch-hero{padding:24px 0 15px}.watch-hero h1{font-size:27px}}
+
+.live-play-overlay[hidden]{display:none!important}
+.live-play-overlay{position:absolute;z-index:5;bottom:18px;left:50%;transform:translateX(-50%);padding:12px 18px;border:1px solid #e4c58d;border-radius:24px;background:#181d2bf2;color:#fff0d5;font:800 13px/1.2 "DM Sans",sans-serif;white-space:nowrap;box-shadow:0 5px 25px #0009;cursor:pointer}
