@@ -53,3 +53,7 @@ footer>div{display:flex;align-items:center;gap:12px}footer img{width:29px}
 
 .live-play-overlay[hidden]{display:none!important}
 .live-play-overlay{position:absolute;z-index:5;bottom:18px;left:50%;transform:translateX(-50%);padding:12px 18px;border:1px solid #e4c58d;border-radius:24px;background:#181d2bf2;color:#fff0d5;font:800 13px/1.2 "DM Sans",sans-serif;white-space:nowrap;box-shadow:0 5px 25px #0009;cursor:pointer}
+
+/* A arte oficial fica visível quando o sinal não está disponível, antes/depois de qualquer culto. */
+.wait-card{padding:0;background:#101010}
+.wait-card img.offline-final-art{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain}

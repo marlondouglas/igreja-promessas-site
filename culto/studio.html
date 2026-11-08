@@ -7,8 +7,8 @@
 <title>Central de Transmissão | Igreja Promessas</title>
 <link rel="icon" href="/logo-promessas.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/culto/studio.css?v=1110-pixanim1">
-<script defer src="/culto/studio.js?v=1110-pixanim2"></script>
-<script defer src="/culto/transmitir.js?v=1108reconnect3"></script>
+<script defer src="/culto/studio.js?v=1111-filmesR5a"></script>
+<script defer src="/culto/transmitir.js?v=1111-filmesR5a"></script>
 </head>
 <body class="studio-body">
 <header class="studio-header">
@@ -18,6 +18,7 @@
 <main class="studio-main">
  <div class="head-intro"><div><p class="kicker">PRODUÇÃO DE CULTOS <span aria-hidden="true">✦</span> MINISTÉRIO PROMESSAS</p><h1>Sua igreja. <em>Sua transmissão.</em></h1><p>Configure as cenas, confira o enquadramento e ensaie a abertura, o culto e o encerramento.</p></div><p class="honesty"><span>ℹ</span> <strong>SERVIDOR DO NOTEBOOK</strong> — o ensaio pode enviar vídeo real ao servidor local, com senha. A saída pública HTTPS já está configurada. Confirme o sinal no celular antes do culto oficial.</p></div>
  <div class="studio-grid">
+  <div class="settings-column">
   <section class="settings card" aria-labelledby="settings-title">
     <div class="card-top"><div><span class="eyebrow">01 · CONFIGURAÇÃO</span><h2 id="settings-title">Preparar o culto</h2></div><span class="tiny-chip">Tudo em um só lugar</span></div>
     <label for="service-name">Título da transmissão</label><input id="service-name" type="text" value="Culto da Família" maxlength="75" autocomplete="off">
@@ -30,7 +31,7 @@
     <div class="phone-tip"><span>☾</span><p><strong>Gravando pelo celular?</strong> Ative o modo <b>Não Perturbe</b> antes do culto, carregue o aparelho e coloque-o na orientação escolhida.</p></div>
     <div class="settings-line"><label class="checkline"><input id="test-mode" type="checkbox"> <span>Modo de teste (abertura acelerada)</span></label><span class="tiny-chip">Prévia</span></div>
     <p class="small-description">Tempo normal: preparação de <strong>10 segundos</strong> + abertura de <strong>5 minutos</strong>. No teste a abertura dura 15 segundos e pode ser adiantada.</p>
-    <div class="scene-timeline" aria-label="Sequência das cenas"><div><strong>01</strong><span>10s<br><small>Contagem</small></span></div><div><strong>02</strong><span>5min<br><small>Abertura</small></span></div><div><strong>03</strong><span>LIVE<br><small>Câmera</small></span></div><div><strong>04</strong><span>SAÍDA<br><small>Créditos</small></span></div></div>
+    <div class="scene-timeline" aria-label="Sequência das cenas"><div><strong>01</strong><span>10s<br><small>Contagem</small></span></div><div><strong>02</strong><span>5min<br><small>Abertura</small></span></div><div><strong>03</strong><span>LIVE<br><small>Câmera</small></span></div><div><strong>04</strong><span>2min<br><small>Encerramento R5</small></span></div></div>
     <div class="settings-heading"><span>O que será transmitido?</span><small>Uma fonte por vez</small></div>
     <div class="source-picker" role="group" aria-label="Fonte da transmissão">
      <button type="button" id="source-camera" class="source-tile selected" aria-pressed="true"><span class="source-icon">◉</span><strong>Câmera</strong><small>Celular ou webcam</small></button>
@@ -45,6 +46,20 @@
     <button id="prepare-camera" class="camera-button" type="button">◉ Preparar câmera e microfone</button>
     <p class="camera-note" id="camera-note" role="status">O navegador pedirá autorização apenas quando você preparar a câmera. Nada é enviado a um servidor.</p>
   </section>
+
+ <section class="card output-help" aria-labelledby="broadcast-title">
+ <div class="card-top"><div><span class="eyebrow">04 · TRANSMISSÃO PELO NOTEBOOK</span><h2 id="broadcast-title">Servidor da Igreja Promessas</h2></div><span class="needs-connect" id="server-badge">TESTE LOCAL</span></div>
+ <p><strong>O notebook envia o culto para a página pública da igreja por HTTPS.</strong> Marque o envio e informe a senha privada. Se a apresentação já estiver em andamento, clique em <strong>Conectar transmissão agora</strong>.</p>
+ <div class="settings-line"><label class="checkline"><input id="publish-enabled" type="checkbox"><span>Enviar o vídeo composto ao servidor do notebook</span></label></div>
+ <div class="publishing-row">
+  <div class="input-group"><label for="whip-url">Endereço WHIP do notebook</label><input id="whip-url" type="url" value="http://127.0.0.1:8889/culto/whip" spellcheck="false" autocomplete="off"><small>Endereço local para o teste no Chrome do notebook. A publicação sai pelo notebook e chega ao site público via túnel HTTPS já configurado.</small></div>
+  <div class="input-group smaller"><label for="publish-secret">Senha privada de transmissão</label><input id="publish-secret" type="password" placeholder="Senha em CHAVE-DO-ESTUDIO.txt" autocomplete="off"><small>Arquivo privado na pasta Igreja-Promessas-Live-Server do notebook. A senha não é salva no site.</small></div>
+ </div>
+ <div class="publishing-actions"><button id="test-server" type="button" class="link-button">Verificar servidor</button><button id="reconnect-publish" type="button" class="link-button">Conectar transmissão agora</button><a class="control secondary" href="http://127.0.0.1:8889/culto" target="_blank" rel="noopener noreferrer">Ver sinal local ↗</a><a class="control secondary" href="/culto/" target="_blank" rel="noopener">Ver página do público ↗</a></div>
+ <p id="publish-status" role="status">Ensaio local: o envio ao notebook está desativado.</p>
+ <p class="fineprint"><strong>Transmissão direta:</strong> o sinal do estúdio chega ao servidor local e é disponibilizado no site da igreja por HTTPS. O selo NO AR só confirma a conexão local; verifique a reprodução no celular usando internet móvel antes do culto oficial.</p>
+</section>
+  </div>
   <section class="preview-column">
    <div class="card player-panel"><div class="preview-heading"><div><span class="eyebrow">02 · MONITOR DE PROGRAMAÇÃO</span><h2>Saída de vídeo <span class="preview-portrait-label" id="format-label">16:9 • Horizontal</span></h2></div><span id="scene-status" class="scene-status">EM ESPERA</span></div>
     <div class="preview-holder"><div class="preview-box" id="preview-box" data-format="horizontal"><canvas id="program-canvas" width="1280" height="720" aria-label="Prévia do vídeo da transmissão, com abertura e cenas"></canvas><div class="preview-loading" id="preview-loading">Carregando identidade visual…</div></div></div>
@@ -89,35 +104,11 @@
     <p class="overlay-feedback" id="card-feedback" role="status" aria-live="polite">Edite o conteúdo, clique em “Exibir card” e veja no monitor. Durante a live, ele aparece na imagem da câmera.</p>
     <p class="overlay-disclaimer">O vídeo recebe apenas um conteúdo informativo por vez. A transição é gravada e transmitida como parte da imagem final, nos formatos vertical e horizontal.</p>
    </section>
-   <div class="card guidance"><div><span class="eyebrow">04 · PRODUÇÃO</span><h2>O que verá quem assiste?</h2></div><div class="guidance-grid"><div><span class="guide-emoji">✧</span><strong>Abertura original</strong><p>Logo animada, mensagens de boas-vindas, música instrumental original e contagem de 5 minutos.</p></div><div><span class="guide-emoji">▤</span><strong>Identidade do culto</strong><p>Tarja elegante com logo, nome do culto e endereço, adequada ao formato escolhido.</p></div><div><span class="guide-emoji">↺</span><strong>Sem cortes secos</strong><p>Pausa e encerramento com cenas próprias. A saída final agradece e apresenta o site e o aplicativo.</p></div></div></div>
+   <div class="card guidance"><div><span class="eyebrow">05 · PRODUÇÃO</span><h2>O que verá quem assiste?</h2></div><div class="guidance-grid"><div><span class="guide-emoji">✧</span><strong>Abertura original</strong><p>Logo animada, mensagens de boas-vindas, música instrumental original e contagem de 5 minutos.</p></div><div><span class="guide-emoji">▤</span><strong>Identidade do culto</strong><p>Tarja elegante com logo, nome do culto e endereço, adequada ao formato escolhido.</p></div><div><span class="guide-emoji">↺</span><strong>Sem cortes secos</strong><p>Pausa e encerramento com cenas próprias. A saída final agradece e apresenta o site e o aplicativo.</p></div></div></div>
   </section>
  </div>
- <section class="card output-help" aria-labelledby="broadcast-title">
- <div class="card-top"><div><span class="eyebrow">04 · TRANSMISSÃO PELO NOTEBOOK</span><h2 id="broadcast-title">Servidor da Igreja Promessas</h2></div><span class="needs-connect" id="server-badge">TESTE LOCAL</span></div>
- <p><strong>O notebook envia o culto para a página pública da igreja por HTTPS.</strong> Marque o envio e informe a senha privada. Se a apresentação já estiver em andamento, clique em <strong>Conectar transmissão agora</strong>.</p>
- <div class="settings-line"><label class="checkline"><input id="publish-enabled" type="checkbox"><span>Enviar o vídeo composto ao servidor do notebook</span></label></div>
- <div class="publishing-row">
-  <div class="input-group"><label for="whip-url">Endereço WHIP do notebook</label><input id="whip-url" type="url" value="http://127.0.0.1:8889/culto/whip" spellcheck="false" autocomplete="off"><small>Endereço local para o teste no Chrome do notebook. A publicação sai pelo notebook e chega ao site público via túnel HTTPS já configurado.</small></div>
-  <div class="input-group smaller"><label for="publish-secret">Senha privada de transmissão</label><input id="publish-secret" type="password" placeholder="Senha em CHAVE-DO-ESTUDIO.txt" autocomplete="off"><small>Arquivo privado na pasta Igreja-Promessas-Live-Server do notebook. A senha não é salva no site.</small></div>
- </div>
- <div class="publishing-actions"><button id="test-server" type="button" class="link-button">Verificar servidor</button><button id="reconnect-publish" type="button" class="link-button">Conectar transmissão agora</button><a class="control secondary" href="http://127.0.0.1:8889/culto" target="_blank" rel="noopener noreferrer">Ver sinal local ↗</a><a class="control secondary" href="/culto/" target="_blank" rel="noopener">Ver página do público ↗</a></div>
- <p id="publish-status" role="status">Ensaio local: o envio ao notebook está desativado.</p>
- <p class="fineprint"><strong>Transmissão direta:</strong> o sinal do estúdio chega ao servidor local e é disponibilizado no site da igreja por HTTPS. O selo NO AR só confirma a conexão local; verifique a reprodução no celular usando internet móvel antes do culto oficial.</p>
-</section>
-<details class="studio-music-credits">
-  <summary>Créditos e licenças da abertura</summary>
-  <p>Fundo animado: <a href="https://www.churchmediastudio.com/free-church-countdown" target="_blank" rel="noopener noreferrer">Church Media Studio</a> (livre para uso em cultos e transmissões; edição e sobreposição de texto da igreja).</p>
-  <p>Música gospel instrumental editada e combinada para a abertura, sob <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">Creative Commons CC BY 4.0</a>, por BudgetPixel AI:</p>
-  <ul>
-   <li><a href="https://budgetpixel.com/background-music/joyful-gospel-gathering-3c370c9d" target="_blank" rel="noopener noreferrer">Joyful Gospel Gathering</a></li>
-   <li><a href="https://budgetpixel.com/background-music/sunday-gospel-shuffle-d023cd1f" target="_blank" rel="noopener noreferrer">Sunday Gospel Shuffle</a></li>
-   <li><a href="https://budgetpixel.com/background-music/church-pew-stomp-b48a2b16" target="_blank" rel="noopener noreferrer">Church Pew Stomp</a></li>
-   <li><a href="https://budgetpixel.com/background-music/rousing-gospel-romp-345584f1" target="_blank" rel="noopener noreferrer">Rousing Gospel Romp</a></li>
-   <li><a href="https://budgetpixel.com/background-music/joyful-gospel-piano-walk-d2cee218" target="_blank" rel="noopener noreferrer">Joyful Gospel Piano Walk</a></li>
-  </ul>
-  <p>Adaptação: combinação e transições entre as faixas, atenuação e finalização em 5 minutos. Os fonogramas são instrumentais e não pertencem à igreja.</p>
-</details>
+<details class="studio-music-credits"><summary>Vídeos originais da transmissão</summary><p>Abertura Promessas R5: 5 minutos. Encerramento Promessas R5: 2 minutos. Ambos incluem voz e música na própria mídia. Depois do encerramento, a arte final permanece no site enquanto não houver transmissão.</p></details>
 </main>
 <footer class="studio-footer"><span>IGREJA MINISTÉRIO PROMESSAS · CENTRAL DE PRODUÇÃO</span><span>Resgatar almas e restaurar famílias · <a href="/">igrejapromessas.site</a></span></footer>
-<audio id="music-bed" src="/culto/assets/gospel-abertura-5min.mp3" preload="none" loop></audio>
+<!-- Abertura/encerramento R5 incluem trilha e narração no próprio vídeo. -->
 </body></html>

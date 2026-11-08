@@ -45,7 +45,7 @@
       b.setAttribute("aria-pressed",String(selected));
     });
     cardFeedback(chosenMessageMode==="mini"
-      ?"Animação pequena selecionada: QR Code fixo e tutorial em quatro passos, com repetição suave. O botão mostrado no vídeo é ilustrativo."
+      ?"Animação pequena selecionada: QR Code fixo e tutorial em cinco passos, com repetição suave. O botão mostrado no vídeo é ilustrativo."
       :chosenMessageMode==="full"
         ?"Tela completa selecionada. A transição de ida e volta será automática."
         :"Tarja inferior selecionada. A identificação do culto será substituída temporariamente.");
@@ -64,8 +64,32 @@
  introMotion.muted=true;
  introMotion.playsInline=true;
  introMotion.loop=true;
- introMotion.preload="metadata";
+ introMotion.preload="none";
  introMotion.crossOrigin="anonymous";
+ // Abertura R5 e encerramento R5: video e voz/musica embutidos.
+ // Audio dos videos e capturado no mesmo MediaStream da transmissao via Web Audio.
+ const openingFilm=document.createElement("video");
+ const endingFilm=document.createElement("video");
+ for(const [film,src] of [
+   [openingFilm,"/culto/assets/abertura-promessas-300s-R5.mp4"],
+   [endingFilm,"/culto/assets/encerramento-promessas-120s-R5.mp4"]
+ ]){
+   film.src=src;film.preload="auto";film.playsInline=true;
+   film.crossOrigin="anonymous";film.muted=false;film.volume=1;
+ }
+ const finalCard=new Image();
+ finalCard.src="/culto/assets/tela-final-promessas-R5.png";
+ function pauseFilms(){
+   openingFilm.pause();endingFilm.pause();
+ }
+ function startFilm(film){
+   pauseFilms();
+   try{film.currentTime=0;}catch(_){}
+   film.play().catch(e=>{
+     $("record-status").textContent="Falha ao iniciar audio/video R5: "+(e?.name||"bloqueado");
+     status("O video com som nao iniciou. Toque no estúdio e tente novamente.");
+   });
+ }
  let format="horizontal",phase="waiting",phaseStart=performance.now(),lastDraw=0;
  let cameraStream=null,camReady=false,recording=null,recordChunks=[],recordStream=null;
  let ac=null,mediaDest=null,musicSource=null,micSource=null,micGain=null;
@@ -247,6 +271,15 @@
   }
 
 
+
+  function drawFullBrand(w,h,v){
+    // Keep this brand zone identical on ALL full-screen card types.
+    const size=v?161:123;
+    logoAt(w/2,h*(v?.135:.160),size);
+    text("IGREJA MINISTÉRIO PROMESSAS",w/2,h*(v?.257:.299),v?23:22,"#e7d2ae",800,"center",w*.94);
+  }
+
+
   function drawFullMessage(now,opacity=1){
     const c=cardState.config;if(!c)return;
     const w=canvas.width,h=canvas.height,v=format==="vertical";
@@ -254,71 +287,62 @@
     const pix=c.type==="pix"||c.type==="pix_animation";
     ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,opacity));
     const grad=ctx.createLinearGradient(0,0,w,h);
-    grad.addColorStop(0,c.style==="purple"?"#171527":"#101725");
-    grad.addColorStop(.65,c.style==="blue"?"#12283c":"#1a2032");
-    grad.addColorStop(1,c.style==="purple"?"#272039":"#171a27");
+    grad.addColorStop(0,c.style==="purple"?"#171427":"#101725");
+    grad.addColorStop(.68,c.style==="blue"?"#11293c":"#1a2232");
+    grad.addColorStop(1,c.style==="purple"?"#292039":"#171a27");
     ctx.fillStyle=grad;ctx.fillRect(0,0,w,h);
-    const ambient=ctx.createRadialGradient(w*.73,h*.27,0,w*.73,h*.27,w*.76);
-    ambient.addColorStop(0,"rgba(218,180,119,.12)");
-    ambient.addColorStop(1,"rgba(218,180,119,0)");
+    const ambient=ctx.createRadialGradient(w*.50,h*.53,0,w*.50,h*.53,w*.58);
+    ambient.addColorStop(0,"rgba(210,167,101,.075)");
+    ambient.addColorStop(1,"rgba(210,167,101,0)");
     ctx.fillStyle=ambient;ctx.fillRect(0,0,w,h);
-    // Small restrained accent, instead of overlapping orbital lines.
-    roundRect(w*.08,h*(v?.058:.092),w*.13,v?5:4,3,pal.line);
-    churchWatermark(w*(v?.07:.07),h*(v?.10:.15),Math.min(w*(v?.27:.16),h*(v?.16:.27)),.18);
+    drawFullBrand(w,h,v);
     if(pix){
-      // Two independent zones: information and a large, static, scannable QR.
+      const tutorial=c.type==="pix_animation"?pixTutorialStep(now):null;
+      text("OFERTAS E DÍZIMOS",w/2,h*(v?.337:.393),v?39:41,pal.title,800,"center",w*.90);
       if(v){
+        // Portrait: QR in a reserved central square; no text is allowed to cross it.
         const cx=w/2;
-        text(church,cx,h*.19,19,"#d7c6a7",800,"center",w*.91);
-        text("OFERTAS E DÍZIMOS",cx,h*.275,38,pal.title,800,"center",w*.90);
-        const tutorial=c.type==="pix_animation"?pixTutorialStep(now):null;
-        text(tutorial?tutorial.label:"Sua generosidade transforma vidas.",cx,h*.340,21,"#f8efe3",600,"center",w*.90);
-        const q=Math.min(w*.53,h*.30),qx=(w-q)/2,qy=h*.385;
-        roundRect(qx-12,qy-12,q+24,q+24,16,"#fff");
+        text(tutorial?tutorial.label:"Sua generosidade transforma vidas.",cx,h*.411,22,"#f7efe4",650,"center",w*.90);
+        const q=Math.min(w*.455,h*.255),qx=(w-q)/2,qy=h*.47;
+        roundRect(qx-16,qy-16,q+32,q+32,17,"#fff");
         if(pixQR.complete&&pixQR.naturalWidth)ctx.drawImage(pixQR,qx,qy,q,q);
-        text("PIX: iemp.promessas@gmail.com",cx,h*.739,23,"#ffefd0",800,"center",w*.92);
-        text("Recebedor: Igreja Evangélica",cx,h*.800,17,"#d8c8ad",700,"center",w*.92);
-        text("Ministério Promessas",cx,h*.828,17,"#d8c8ad",700,"center",w*.92);
-        text("Confira o recebedor antes de confirmar.",cx,h*.913,15,"#d0bb9d",500,"center",w*.93);
+        text("PIX: iemp.promessas@gmail.com",cx,h*.775,23,"#ffefd1",800,"center",w*.92);
+        text("Recebedor: Igreja Evangélica",cx,h*.834,18,"#d8c8ad",700,"center",w*.93);
+        text("Ministério Promessas",cx,h*.866,18,"#d8c8ad",700,"center",w*.93);
+        text("Confira o nome no banco antes de confirmar.",cx,h*.941,16,"#d0bb9d",550,"center",w*.95);
       }else{
-        const tx=w*.075,rightEdge=w*.612,textWidth=rightEdge-tx;
-        text(church,tx,h*.155,20,"#d7c6a7",800,"left",textWidth);
-        text("OFERTAS E DÍZIMOS",tx,h*.265,43,pal.title,800,"left",textWidth);
-        const tutorial=c.type==="pix_animation"?pixTutorialStep(now):null;
-        const phrase=tutorial?tutorial.label:"Sua generosidade transforma vidas.";
-        ctx.font="700 29px "+fonts;
-        const lines=cardLines(phrase,textWidth,3);
-        lines.forEach((line,i)=>text(line,tx,h*.373+i*40,29,"#f8efe3",700,"left",textWidth));
-        text("Abra o app do banco e escolha Pix.",tx,h*.548,24,"#dacabb",600,"left",textWidth);
-        text("PIX: iemp.promessas@gmail.com",tx,h*.684,21,"#ffedc5",800,"left",textWidth);
-        text("Recebedor: Igreja Evangélica",tx,h*.753,18,"#d7c4ab",600,"left",textWidth);
-        text("Ministério Promessas",tx,h*.793,18,"#d7c4ab",600,"left",textWidth);
-        text("Confira o nome no banco antes de confirmar.",tx,h*.887,16,"#cbb99f",500,"left",textWidth);
-        const q=Math.min(w*.275,h*.51),qx=w*.68,qy=h*.235;
-        roundRect(qx-15,qy-15,q+30,q+30,17,"#fff");
+        // Landscape: QR lives on the right, bank instructions/recipient on the left.
+        const tx=w*.09,tw=w*.45;
+        const hint=tutorial?tutorial.label:"Sua generosidade ajuda a transformar vidas.";
+        const hintSize=28;
+        ctx.font="700 "+hintSize+"px "+fonts;
+        const hintLines=cardLines(hint,tw,2);
+        hintLines.forEach((line,i)=>text(line,tx,h*(.505+i*.057),hintSize,"#faf0e5",700,"left",tw));
+        text(tutorial?tutorial.detail:"Abra seu banco e escolha Pix.",tx,h*.661,21,"#dfcebb",600,"left",tw);
+        text("PIX: iemp.promessas@gmail.com",tx,h*.761,20,"#ffeccd",800,"left",tw);
+        text("Recebedor: Igreja Evangélica Ministério Promessas",tx,h*.829,17,"#d5c6b1",700,"left",tw);
+        text("Confira o recebedor antes de confirmar.",tx,h*.902,16,"#c4b5a1",550,"left",tw);
+        const q=Math.min(w*.265,h*.45),qx=w*.648,qy=h*.473;
+        roundRect(qx-16,qy-16,q+32,q+32,16,"#fff");
         if(pixQR.complete&&pixQR.naturalWidth)ctx.drawImage(pixQR,qx,qy,q,q);
       }
       ctx.restore();return;
     }
-    // Consistent 4-zone typography for Scripture, notices, prayer, and events.
-    text(church,w/2,h*(v?.17:.137),v?18:19,"#d6c4a2",800,"center",w*.89);
+    // Other cards use exactly the same centered logo and ministry name.
     const heading=String(c.heading||"PALAVRA DE DEUS").toUpperCase();
-    const headingLimit=w*(v?.85:.84);
-    ctx.font="800 "+(v?32:35)+"px "+fonts;
-    const hLines=cardLines(heading,headingLimit,v?3:2);
-    const hLineHeight=v?48:43;
-    const hCenter=h*(v?.320:.270);
-    hLines.forEach((line,i)=>text(line,w/2,hCenter+(i-(hLines.length-1)/2)*hLineHeight,v?32:35,pal.title,800,"center",headingLimit));
-    const width=w*(v?.83:.77),height=h*(v?.275:.295);
-    const fitted=fittedCardLines(c.message,width,height,v?42:51,v?28:30,v?7:5);
-    const lineH=fitted.font*1.40;
-    const center=h*(v?.580:.547);
-    fitted.lines.forEach((line,i)=>text(line,w/2,center+(i-(fitted.lines.length-1)/2)*lineH,fitted.font,"#fff8f0",700,"center",width));
+    const hWidth=w*.87,hFont=v?33:34;
+    ctx.font="800 "+hFont+"px "+fonts;
+    const hLines=cardLines(heading,hWidth,v?3:2);
+    const hLineH=hFont*1.35,headingMid=h*(v?.373:.410);
+    hLines.forEach((line,i)=>text(line,w/2,headingMid+(i-(hLines.length-1)/2)*hLineH,hFont,pal.title,800,"center",hWidth));
+    const width=w*(v?.84:.79);
+    const fit=fittedCardLines(c.message,width,h*(v?.24:.26),v?43:48,v?28:30,v?7:5);
+    const lineHeight=fit.font*1.42,mid=h*(v?.615:.655);
+    fit.lines.forEach((line,i)=>text(line,w/2,mid+(i-(fit.lines.length-1)/2)*lineHeight,fit.font,"#fff7ed",700,"center",width));
     if(c.reference){
-      const ref=String(c.reference).trim();
-      text(ref,w/2,h*(v?.820:.806),v?22:23,"#e8cfaa",700,"center",w*.85);
+      text(String(c.reference).trim(),w/2,h*(v?.835:.864),v?23:22,"#e9d0ab",700,"center",w*.88);
     }
-    text(motto,w/2,h*(v?.932:.935),v?17:17,"#afa79f",500,"center",w*.88);
+    text(motto,w/2,h*(v?.942:.943),v?17:16,"#b6ada4",500,"center",w*.88);
     ctx.restore();
   }
 
@@ -336,92 +360,111 @@
     g.addColorStop(.53,"rgba(244,214,164,.28)");
     g.addColorStop(1,"rgba(241,199,128,0)");
     ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
-    if(full){
-      const size=Math.min(w*.095,h*.14)*(1+.12*brightness);
-      logoAt(w*.50,h*.50,size,brightness*.85);
+    ctx.restore();
+  }
+
+
+  const pixTutorialSteps=[
+    {label:"ABRA SEU BANCO",detail:"Acesse o aplicativo do seu banco",kind:"bank"},
+    {label:"ESCOLHA PIX",detail:"Toque na opção Pix",kind:"select"},
+    {label:"LEIA O QR CODE",detail:"Escaneie o código da igreja",kind:"scan"},
+    {label:"CONFIRA O RECEBEDOR",detail:"Igreja Evangélica Ministério Promessas",kind:"confirm"},
+    {label:"ENVIE SUA OFERTA",detail:"Simulação: Pix enviado ✓",kind:"sent"}
+  ];
+  const PIX_STEP_MS=3250;
+  function pixTutorialStep(now){
+    const started=cardState.started||now;
+    return pixTutorialSteps[Math.floor(Math.max(0,now-started)/PIX_STEP_MS)%pixTutorialSteps.length];
+  }
+  function drawMiniPhone(x,y,w,h,step,progress,pulse){
+    const ink="#e8e2d7",mint="#b1efd0",gold="#e7c38b";
+    ctx.save();
+    // Phone outline and screen; all steps are 2-D drawings, not fake payment processing.
+    roundRect(x,y,w,h,Math.min(12,w*.12),"#ddd7d4");
+    roundRect(x+3,y+4,w-6,h-8,Math.min(10,w*.09),"#142339");
+    roundRect(x+w*.38,y+6,w*.24,2,1,"#b4c0c4");
+    const cx=x+w*.5,font=Math.max(8,w*.115);
+    if(step.kind==="bank"){
+      text("BANCO",cx,y+h*.23,font,ink,800,"center",w*.80);
+      roundRect(x+w*.16,y+h*.39,w*.68,h*.25,5,"#304864");
+      text("ENTRAR",cx,y+h*.52,font*.86,"#e5f9f1",800,"center",w*.64);
+      text("›",cx,y+h*.82,font*2,gold,700);
+    }else if(step.kind==="select"){
+      text("MENU",cx,y+h*.21,font,ink,800);
+      roundRect(x+w*.13,y+h*.36,w*.74,h*.28,5,"rgba(233,196,138,"+(.22+.30*pulse)+")");
+      text("PIX",cx,y+h*.50,font*1.28,"#ffe7bc",800);
+      ctx.strokeStyle="rgba(249,224,165,"+(.80-.40*pulse)+")";ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(cx,y+h*.50,w*(.27+.07*pulse),0,Math.PI*2);ctx.stroke();
+    }else if(step.kind==="scan"){
+      text("LER QR",cx,y+h*.18,font,ink,800);
+      const s=w*.44,left=cx-s/2,top=y+h*.36;
+      ctx.strokeStyle=mint;ctx.lineWidth=2;
+      ctx.strokeRect(left,top,s,s);
+      const lineY=top+2+progress*(s-4);
+      ctx.beginPath();ctx.moveTo(left+3,lineY);ctx.lineTo(left+s-3,lineY);ctx.stroke();
+      text("ESCANEAR",cx,y+h*.88,font*.70,mint,800);
+    }else if(step.kind==="confirm"){
+      text("RECEBEDOR",cx,y+h*.18,font*.85,ink,800,"center",w*.84);
+      text("IGREJA",cx,y+h*.37,font*.91,gold,800,"center",w*.83);
+      text("MINISTÉRIO",cx,y+h*.51,font*.76,"#f3ecdf",700,"center",w*.91);
+      text("PROMESSAS",cx,y+h*.65,font*.74,"#f3ecdf",700,"center",w*.89);
+      roundRect(x+w*.17,y+h*.77,w*.66,h*.12,4,"#386855");
+      text("CONFIRMAR",cx,y+h*.83,font*.62,"#edfff5",800,"center",w*.62);
+    }else{
+      ctx.strokeStyle=mint;ctx.lineWidth=Math.max(3,w*.055);
+      ctx.beginPath();ctx.arc(cx,y+h*.39,w*.22,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(cx-w*.11,y+h*.40);ctx.lineTo(cx-w*.025,y+h*.48);ctx.lineTo(cx+w*.15,y+h*.30);ctx.stroke();
+      text("PIX ENVIADO",cx,y+h*.70,font*.76,mint,800,"center",w*.90);
+      text("SIMULAÇÃO",cx,y+h*.87,font*.66,"#b8cad4",700,"center",w*.90);
+    }
+    // A soft tap marker indicates simulated user interaction.
+    if(["bank","select","confirm"].includes(step.kind)){
+      const tx=x+w*.74,ty=y+h*.64;
+      ctx.beginPath();ctx.arc(tx,ty,4+6*pulse,0,Math.PI*2);
+      ctx.strokeStyle="rgba(235,190,117,"+(1-.65*pulse)+")";ctx.lineWidth=2;ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function drawPixMiniAnimation(now,opacity=1,shift=0){
+    const v=format==="vertical",w=canvas.width,h=canvas.height;
+    const pal=cardThemes[cardState.config?.style]||cardThemes.gold;
+    // Deliberately smaller than the old promo card, so the preacher remains visible.
+    const bw=w*(v?.82:.43),bh=h*(v?.155:.238);
+    const bx=w-bw-w*(v?.049:.029),by=h-bh-h*(v?.038:.044);
+    const elapsed=Math.max(0,now-(cardState.started||now));
+    const n=Math.floor(elapsed/PIX_STEP_MS)%pixTutorialSteps.length;
+    const step=pixTutorialSteps[n];
+    const progress=(elapsed%PIX_STEP_MS)/PIX_STEP_MS;
+    const pulse=.5+.5*Math.sin(elapsed*.006);
+    const qrSize=Math.min(bh*.65,bw*.20),qx=bx+bw-qrSize-15,qy=by+(bh-qrSize)/2+10;
+    const phoneW=Math.min(bh*.42,bw*.145),phoneH=bh*.79;
+    const phoneX=qx-phoneW-(v?24:14),phoneY=by+(bh-phoneH)/2+7;
+    const left=bx+17,contentW=Math.max(124,phoneX-left-14);
+    ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,opacity));ctx.translate(0,shift);
+    ctx.shadowColor="#000a";ctx.shadowBlur=22;ctx.shadowOffsetY=7;
+    roundRect(bx,by,bw,bh,18,"rgba(11,18,31,.96)");
+    ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+    roundRect(bx,by,5,bh,3,pal.line);
+    // Compact centered brand at left; the full-screen version carries the large identity.
+    const logoSize=Math.min(bh*.38,v?73:64),logoCx=left+contentW*.42;
+    if(logo.complete&&logo.naturalWidth)ctx.drawImage(logo,logoCx-logoSize/2,by+8,logoSize,logoSize);
+    text("MINISTÉRIO PROMESSAS",logoCx,by+logoSize+17,v?13:12,pal.title,800,"center",contentW*.98);
+    text("COMO OFERTAR",left,by+bh*.625,v?17:16,"#ffefdb",800,"left",contentW);
+    const label=step.kind==="sent"?"PIX ENVIADO ✓":step.label;
+    text(label,left,by+bh*.785,v?16:15,step.kind==="sent"?"#b8f4da":"#ffffff",800,"left",contentW);
+    text(step.kind==="sent"?"EXEMPLO ILUSTRATIVO":step.detail,left,by+bh*.914,v?12:11,"#d2c8bb",600,"left",contentW);
+    drawMiniPhone(phoneX,phoneY,phoneW,phoneH,step,progress,pulse);
+    roundRect(qx-5,qy-5,qrSize+10,qrSize+10,8,"#fff");
+    if(pixQR.complete&&pixQR.naturalWidth)ctx.drawImage(pixQR,qx,qy,qrSize,qrSize);
+    text("LEIA O QR",qx+qrSize/2,qy-14,v?13:12,pal.title,800,"center",qrSize+10);
+    for(let i=0;i<pixTutorialSteps.length;i++){
+      const dotx=bx+bw*.49+i*11;
+      ctx.beginPath();ctx.arc(dotx,by+bh-8,2.3,0,Math.PI*2);
+      ctx.fillStyle=i===n?pal.line:"rgba(255,255,255,.23)";ctx.fill();
     }
     ctx.restore();
   }
 
-  const pixTutorialSteps=[
-    {label:"1  ABRA SEU BANCO",detail:"Acesse o aplicativo do seu banco"},
-    {label:"2  TOQUE EM PIX",detail:"Escolha a opção de pagamento Pix"},
-    {label:"3  LEIA O QR CODE",detail:"Aponte a câmera para o código"},
-    {label:"4  CONFIRA O NOME",detail:"Igreja Evangélica Ministério Promessas"}
-  ];
-  function pixTutorialStep(now){
-    const started=cardState.started||now;
-    return pixTutorialSteps[Math.floor(Math.max(0,now-started)/3400)%pixTutorialSteps.length];
-  }
-  function drawPixMiniAnimation(now,opacity=1,shift=0){
-    const w=canvas.width,h=canvas.height,v=format==="vertical";
-    const pal=cardThemes[cardState.config?.style]||cardThemes.gold;
-    const bw=w*(v?.89:.46),bh=h*(v?.185:.268);
-    const bx=w-bw-w*(v?.055:.034),by=h-bh-h*(v?.040:.049);
-    const step=pixTutorialStep(now),stepIndex=pixTutorialSteps.indexOf(step);
-    const elapsed=Math.max(0,now-(cardState.started||now));
-    const pulse=.5+.5*Math.sin(elapsed*.0052);
-    const padding=v?17:17;
-    const q=Math.min(bh*.69,bw*(v?.21:.255));
-    const qx=bx+bw-q-padding-3,qy=by+(bh-q)/2+3;
-    const contentWidth=qx-bx-padding-13;
-    ctx.save();
-    ctx.globalAlpha=Math.max(0,Math.min(1,opacity));
-    ctx.translate(0,shift);
-    ctx.shadowColor="rgba(0,0,0,.58)";ctx.shadowBlur=24;ctx.shadowOffsetY=9;
-    roundRect(bx,by,bw,bh,Math.min(20,w*.025),"rgba(11,19,32,.97)");
-    ctx.shadowBlur=0;ctx.shadowOffsetY=0;
-    roundRect(bx,by,Math.max(5,w*.004),bh,4,pal.line);
-    const labelSize=v?16:17;
-    const headY=by+bh*(v?.19:.19);
-    text("DÍZIMOS E OFERTAS",bx+padding,headY,labelSize,pal.title,800,"left",contentWidth);
-    const subY=by+bh*(v?.35:.37);
-    text("COMO FAZER SEU PIX",bx+padding,subY,v?15:18,"#fff5dd",800,"left",contentWidth);
-    // The arrow simulates a tap on a button — it does NOT pretend the broadcast image is clickable.
-    const buttonX=bx+padding,buttonY=by+bh*(v?.42:.44);
-    const buttonW=Math.min(contentWidth*.63,v?143:165),buttonH=Math.min(bh*.19,v?37:36);
-    roundRect(buttonX,buttonY,buttonW,buttonH,9,"rgba(234,195,130,"+(.17+.16*pulse)+")");
-    ctx.strokeStyle="rgba(247,212,153,.75)";ctx.lineWidth=1;
-    ctx.strokeRect(buttonX+1,buttonY+1,buttonW-2,buttonH-2);
-    text("CLIQUE AQUI",buttonX+buttonW/2,buttonY+buttonH*.62,v?12:14,"#ffedd3",800,"center",buttonW-8);
-    // Animated tap ring near the illustrative button.
-    const tX=buttonX+buttonW+11,tY=buttonY+buttonH*.55;
-    ctx.beginPath();ctx.arc(tX,tY,5+7*pulse,0,Math.PI*2);
-    ctx.strokeStyle="rgba(242,200,130,"+(1-.75*pulse)+")";ctx.lineWidth=2;ctx.stroke();
-    // A stylized smartphone demonstrates scanning; never draw over the real Pix QR.
-    const phoneW=v?39:42,phoneH=v?63:65;
-    const phoneX=qx-phoneW-18,phoneY=by+bh*.41;
-    roundRect(phoneX,phoneY,phoneW,phoneH,7,"#e9d5b7");
-    roundRect(phoneX+3,phoneY+4,phoneW-6,phoneH-8,5,"#1a2b3d");
-    ctx.fillStyle="#e9d5b7";ctx.fillRect(phoneX+phoneW*.36,phoneY+4,phoneW*.28,2);
-    const scanProgress=(Math.sin(elapsed*.0035)+1)/2;
-    const sy=phoneY+16+scanProgress*(phoneH-29);
-    ctx.strokeStyle="rgba(115,236,194,.85)";ctx.lineWidth=2;
-    ctx.beginPath();ctx.moveTo(phoneX+8,sy);ctx.lineTo(phoneX+phoneW-8,sy);ctx.stroke();
-    ctx.strokeStyle="rgba(115,236,194,.42)";ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(phoneX+phoneW+2,sy);ctx.lineTo(qx-8,qy+q*.5);ctx.stroke();
-    const detailWidth=contentWidth;
-    text(step.label,bx+padding,by+bh*(v?.77:.79),v?15:18,"#ffffff",800,"left",detailWidth);
-    text(clampCanvasText(step.detail,detailWidth),bx+padding,by+bh*(v?.91:.92),v?12:13,"#d1c5b6",600,"left",detailWidth);
-    // Grounded QR is static and never obscured; only the outer guide corners pulse.
-    roundRect(qx-7,qy-7,q+14,q+14,9,"#ffffff");
-    if(pixQR.complete&&pixQR.naturalWidth)ctx.drawImage(pixQR,qx,qy,q,q);
-    ctx.strokeStyle="rgba(245,199,121,"+(.40+.5*pulse)+")";
-    ctx.lineWidth=2.5;
-    const cs=14;
-    ctx.beginPath();
-    ctx.moveTo(qx-10,qy+cs);ctx.lineTo(qx-10,qy-10);ctx.lineTo(qx+cs,qy-10);
-    ctx.moveTo(qx+q-cs,qy-10);ctx.lineTo(qx+q+10,qy-10);ctx.lineTo(qx+q+10,qy+cs);
-    ctx.moveTo(qx-10,qy+q-cs);ctx.lineTo(qx-10,qy+q+10);ctx.lineTo(qx+cs,qy+q+10);
-    ctx.moveTo(qx+q-cs,qy+q+10);ctx.lineTo(qx+q+10,qy+q+10);ctx.lineTo(qx+q+10,qy+q-cs);
-    ctx.stroke();
-    // Four tiny progress indicators show the short loop.
-    for(let i=0;i<4;i++){
-      ctx.fillStyle=i===stepIndex?pal.line:"rgba(255,255,255,.20)";
-      ctx.beginPath();ctx.arc(bx+padding+i*12,by+bh-9,v?2.2:2.5,0,Math.PI*2);ctx.fill();
-    }
-    ctx.restore();
-  }
   function drawLowerThird(now){
     if(cardState.active && cardState.config && cardState.started===0 && phase==="live"){
       cardState.started=now;
@@ -498,19 +541,19 @@
    $("end").disabled=!["live","paused","intro"].includes(p);
    $("end").hidden=p==="outro";
     applySourceAudio();
-   if(p==="intro"){
-     try{introMotion.currentTime=0;introMotion.play().catch(()=>{});}catch(_){}
-   }else introMotion.pause();
-   if(p==="intro"||p==="outro")musicOn();
-   else musicOff();
+   introMotion.pause();
+   musicOff(); // Nunca sobrepor a antiga trilha aos videos R5.
+   if(p==="intro")startFilm(openingFilm);
+   else if(p==="outro")startFilm(endingFilm);
+   else pauseFilms();
    window.dispatchEvent(new CustomEvent("promessas-scene",{detail:{phase:p}}));
    const messages={
     waiting:"Pronto para preparar a câmera. Nenhum vídeo será enviado para a internet.",
     countdown:"Contagem regressiva de 10 segundos em andamento. Você ainda pode cancelar.",
-    intro:"Abertura original iniciada. A câmera entrará após a contagem de 5 minutos.",
+    intro:"Abertura Promessas R5 (5 minutos), com narração e música integradas. Após o vídeo, entra a câmera.",
     live:"Câmera no monitor de programação. Para o público assistir, é necessário um encoder/transmissão conectado.",
     paused:"Imagem de pausa no monitor de programação. A câmera está oculta da saída.",
-    outro:"Créditos de encerramento no ar. A câmera já saiu da apresentação.",
+    outro:"Encerramento Promessas R5 (2 minutos), com áudio original. A arte final aparecerá ao terminar.",
     done:"Apresentação encerrada com a tela final. Nenhuma transmissão foi enviada à internet."
    };
    status(messages[p]||"");
@@ -521,8 +564,8 @@
    let label="00:00";
    const mmss=secs=>String(Math.floor(Math.max(0,secs)/60)).padStart(2,"0")+":"+String(Math.floor(Math.max(0,secs)%60)).padStart(2,"0");
    if(phase==="countdown")label="PREPARANDO "+String(Math.max(0,Math.ceil(10-elapsed)))+"s";
-   if(phase==="intro")label="CULTO EM "+mmss(introSeconds-elapsed);
-   if(phase==="outro")label="CRÉDITOS "+mmss(outroSeconds-elapsed);
+   if(phase==="intro")label="CULTO EM "+mmss(Math.max(0,introSeconds-($("test-mode").checked?elapsed:openingFilm.currentTime)));
+   if(phase==="outro")label="ENCERRAMENTO "+mmss(Math.max(0,outroSeconds-($("test-mode").checked?elapsed:endingFilm.currentTime)));
    if(phase==="live"||phase==="paused")label=mmss(elapsed);
    $("timer-label").textContent=label;
  }
@@ -662,9 +705,13 @@
    try{
      ac=new AudioCtx();mediaDest=ac.createMediaStreamDestination();
      window.PromessasAudioStream=mediaDest.stream;
-     musicSource=ac.createMediaElementSource(music);
-     const gain=ac.createGain();gain.gain.value=.31;
-     musicSource.connect(gain);gain.connect(ac.destination);gain.connect(mediaDest);
+     // Som original de cada MP4 -> unico canal de audio WebRTC.
+     // Sem ligar ao alto-falante do notebook, evitando eco com microfone.
+     for(const film of [openingFilm,endingFilm]){
+       const source=ac.createMediaElementSource(film);
+       const gain=ac.createGain();gain.gain.value=1;
+       source.connect(gain);gain.connect(mediaDest);
+     }
      if(cameraStream?.getAudioTracks().length){
        micSource=ac.createMediaStreamSource(cameraStream);
        micGain=ac.createGain();micGain.gain.value=0;
@@ -694,7 +741,7 @@
       status("Prepare a câmera e o microfone antes de iniciar. A prévia permanece local.");return;
     }
    introSeconds=$("test-mode").checked?15:300;
-   outroSeconds=$("test-mode").checked?12:35;
+   outroSeconds=$("test-mode").checked?12:120;
    await audioSetup();
    if(ac?.state==="suspended")await ac.resume().catch(()=>{});
    setPhase("countdown");
@@ -783,7 +830,22 @@
    text("Toque em cancelar para interromper",w/2,cy+r+43,v?17:19,"#dfd9cf",500,"center",w*.90);
    text(motto,w/2,h*.89,v?16:20,"#b3a99b",600,"center",w*.90);
  }
+ function drawFilm(film,label){
+   const w=canvas.width,h=canvas.height;
+   if(film.readyState>=2&&film.videoWidth>0&&film.videoHeight>0){
+     // Conter o quadro inteiro, preservando textos/logo do video em 9:16.
+     ctx.fillStyle="#101010";ctx.fillRect(0,0,w,h);
+     const scale=Math.min(w/film.videoWidth,h/film.videoHeight);
+     const fw=film.videoWidth*scale,fh=film.videoHeight*scale;
+     ctx.drawImage(film,(w-fw)/2,(h-fh)/2,fw,fh);
+   }else{
+     ctx.fillStyle="#101010";ctx.fillRect(0,0,w,h);
+     text("CARREGANDO "+label+"…",w/2,h/2,Math.min(26,w*.042),"#e8c58e",700,"center",w*.88);
+   }
+ }
  function drawIntro(t){
+   drawFilm(openingFilm,"ABERTURA");
+   return;
    const w=canvas.width,h=canvas.height,v=format==="vertical";
    // A real, licensed motion backdrop; blur intentionally masks the source's embedded English timer.
    // All church identity, clock, graphics and typography are drawn fresh into our transmitted canvas.
@@ -890,6 +952,8 @@
    text("Agradecemos sua compreensão.",w/2,h*(v?.83:.88),v?16:19,"#ada9a1",500,"center",w*.9);
  }
  function drawOutro(t){
+   drawFilm(endingFilm,"ENCERRAMENTO");
+   return;
    const w=canvas.width,h=canvas.height,v=format==="vertical";
    background(t);topMark();
    const k=Math.min(outroPhrases.length-1,Math.floor(t/(outroSeconds/outroPhrases.length)));
@@ -903,6 +967,13 @@
  }
  function drawDone(t){
    const w=canvas.width,h=canvas.height,v=format==="vertical";
+   if(finalCard.complete&&finalCard.naturalWidth){
+     ctx.fillStyle="#101010";ctx.fillRect(0,0,w,h);
+     const scale=Math.min(w/finalCard.naturalWidth,h/finalCard.naturalHeight);
+     const fw=finalCard.naturalWidth*scale,fh=finalCard.naturalHeight*scale;
+     ctx.drawImage(finalCard,(w-fw)/2,(h-fh)/2,fw,fh);
+     return;
+   }
    background(t);logoAt(w/2,h*.40,Math.min(w*.23,h*.24));
    text("ATÉ O PRÓXIMO CULTO",w/2,h*(v?.58:.65),v?36:49,"#f1d4a5",800,"center",w*.9);
    text(motto,w/2,h*(v?.66:.75),v?19:25,"#d4c0a2",600,"center",w*.9);
@@ -914,8 +985,14 @@
    lastDraw=now;
    let t=timeSince();
    if(phase==="countdown"&&t>=10){setPhase("intro");t=0;}
-   if(phase==="intro"&&t>=introSeconds){setPhase("live");t=0;}
-   if(phase==="outro"&&t>=outroSeconds){setPhase("done");t=0;if(cameraStream){for(const tr of cameraStream.getTracks())tr.stop();cameraStream=null;camReady=false;}}
+   if(phase==="intro"&&(
+      ($("test-mode").checked&&t>=introSeconds)||
+      (!$("test-mode").checked&&(openingFilm.ended||openingFilm.currentTime>=299.94||t>=introSeconds+35))
+   )){setPhase("live");t=0;}
+   if(phase==="outro"&&(
+      ($("test-mode").checked&&t>=outroSeconds)||
+      (!$("test-mode").checked&&(endingFilm.ended||endingFilm.currentTime>=119.94||t>=outroSeconds+35))
+   )){setPhase("done");t=0;if(cameraStream){for(const tr of cameraStream.getTracks())tr.stop();cameraStream=null;camReady=false;}}
    if(phase==="waiting")drawWaiting(now/1000);
    else if(phase==="countdown")drawCountdown(t);
    else if(phase==="intro")drawIntro(t);

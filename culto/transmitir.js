@@ -6,7 +6,7 @@
  const $=id=>document.getElementById(id);
  const pass=$("publish-secret"),endpoint=$("whip-url"),on=$("publish-enabled");
  let peer=null,resource=null,connection=false,attempting=false,stopping=false;
- let keepVideo=null,authHeader="",connectionTimeout=null;
+ let keepVideo=null,authHeader="",connectionTimeout=null,doneHoldTimeout=null;
  function report(s){$("publish-status").textContent=s;}
  function badge(s){$("server-badge").textContent=s;}
  function allowedURL(s){
@@ -163,8 +163,12 @@
  }
  window.addEventListener("promessas-scene",e=>{
   const phase=e.detail?.phase;
+  if(doneHoldTimeout){clearTimeout(doneHoldTimeout);doneHoldTimeout=null;}
   if(phase==="intro")start();
-  else if(phase==="done"||phase==="waiting")stop();
+  else if(phase==="done"){
+    // Segura a arte final na saida publica antes de encerrar o sinal.
+    doneHoldTimeout=setTimeout(()=>{doneHoldTimeout=null;stop();},18000);
+  }else if(phase==="waiting")stop();
  });
  window.addEventListener("beforeunload",()=>{
   if(peer){try{peer.close();}catch(_){}}

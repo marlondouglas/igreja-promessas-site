@@ -161,3 +161,14 @@ input:focus,textarea:focus,select:focus{border-color:#e5bd7c!important}
 .transition-audio-option small{color:#a7a9b5;font-size:10px;display:block;line-height:1.5}
 
 .studio-music-credits{max-width:1500px;margin:18px auto;color:#aeb5c0;font-size:11px;border:1px solid #383d46;border-radius:12px;padding:13px 19px;background:#151921}.studio-music-credits summary{cursor:pointer;color:#dbbf91;font-weight:850}.studio-music-credits a{color:#efcf95;text-decoration:underline;text-underline-offset:3px}.studio-music-credits ul{columns:2;padding-left:24px}.studio-music-credits p{margin:9px 0}@media(max-width:540px){.studio-music-credits ul{columns:1}}
+
+
+/* O painel 04 ocupa a area livre abaixo da configuracao, ao lado do monitor.
+   Em telas estreitas segue naturalmente os controles de preparacao. */
+.settings-column{display:grid;align-content:start;gap:18px;min-width:0}
+.settings-column .output-help{margin-top:0}
+.settings-column .publishing-row{grid-template-columns:minmax(0,1fr);gap:13px;margin:15px 0}
+.settings-column .publishing-actions{gap:8px}
+.settings-column .publishing-actions .link-button{flex:1 1 160px}
+.settings-column .publishing-actions .control{flex:1 1 155px;text-align:center}
+@media(max-width:920px){.settings-column{gap:15px}}
