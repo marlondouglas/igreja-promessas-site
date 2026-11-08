@@ -93,6 +93,21 @@
  let format="horizontal",phase="waiting",phaseStart=performance.now(),lastDraw=0;
  let cameraStream=null,camReady=false,recording=null,recordChunks=[],recordStream=null;
  let ac=null,mediaDest=null,musicSource=null,micSource=null,micGain=null;
+ let filmMonitorGain=null;
+ let filmMonitorEnabled=true; // Ao começar o ensaio, o operador deve ouvir os videos R5.
+ function updateMonitorButton(){
+   const btn=$("monitor-audio");
+   if(!btn)return;
+   btn.textContent=filmMonitorEnabled?"🔊 Som dos vídeos: ligado":"🔇 Som dos vídeos: desligado";
+   btn.setAttribute("aria-pressed",String(filmMonitorEnabled));
+   if(filmMonitorGain&&ac)filmMonitorGain.gain.setTargetAtTime(filmMonitorEnabled?.92:0,ac.currentTime,.025);
+ }
+ $("monitor-audio")?.addEventListener("click",async()=>{
+   filmMonitorEnabled=!filmMonitorEnabled;
+   if(filmMonitorEnabled&&ac?.state==="suspended")await ac.resume().catch(()=>{});
+   updateMonitorButton();
+ });
+ updateMonitorButton();
  let lastUserMessage="",reason="manual",introSeconds=300,outroSeconds=35;
  let tabWasHidden=false,lastStatus="",recordSize=0;
  const church="IGREJA MINISTÉRIO PROMESSAS";
@@ -705,13 +720,19 @@
    try{
      ac=new AudioCtx();mediaDest=ac.createMediaStreamDestination();
      window.PromessasAudioStream=mediaDest.stream;
-     // Som original de cada MP4 -> unico canal de audio WebRTC.
-     // Sem ligar ao alto-falante do notebook, evitando eco com microfone.
+     // Som original R5 segue para a live E para o monitor do notebook.
+     // O monitor nao recebe microfone ou audio da aba compartilhada, para evitar eco.
+     filmMonitorGain=ac.createGain();
+     filmMonitorGain.gain.value=filmMonitorEnabled?.92:0;
+     filmMonitorGain.connect(ac.destination);
      for(const film of [openingFilm,endingFilm]){
        const source=ac.createMediaElementSource(film);
        const gain=ac.createGain();gain.gain.value=1;
-       source.connect(gain);gain.connect(mediaDest);
+       source.connect(gain);
+       gain.connect(mediaDest);         // Audio da transmissao/gravação.
+       gain.connect(filmMonitorGain);   // Som audivel no notebook, com volume controlavel.
      }
+     updateMonitorButton();
      if(cameraStream?.getAudioTracks().length){
        micSource=ac.createMediaStreamSource(cameraStream);
        micGain=ac.createGain();micGain.gain.value=0;
@@ -719,7 +740,10 @@
      }
       attachDisplayAudio();
       applySourceAudio();
-    }catch(err){$("record-status").textContent="Áudio de gravação indisponível";}
+    }catch(err){
+     $("record-status").textContent="Falha no áudio dos vídeos R5: "+(err?.message||"erro desconhecido");
+     status("Não foi possível ativar o áudio. Verifique as permissões de som do navegador.");
+   }
  }
  async function musicOn(){
    if(!music)return;

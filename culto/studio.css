@@ -172,3 +172,10 @@ input:focus,textarea:focus,select:focus{border-color:#e5bd7c!important}
 .settings-column .publishing-actions .link-button{flex:1 1 160px}
 .settings-column .publishing-actions .control{flex:1 1 155px;text-align:center}
 @media(max-width:920px){.settings-column{gap:15px}}
+
+
+/* Áudio dos MP4s R5 na prévia, sem duplicar o som da transmissão. */
+.audio-monitor-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0 0}
+.audio-monitor-row button{flex:0 0 auto;border-color:#aa9166;color:#f7d8a2}
+.audio-monitor-row button[aria-pressed="false"]{color:#a9b3c4;border-color:#414956}
+.audio-monitor-row small{font-size:10px;color:#a9b3be;line-height:1.5;flex:1 1 220px}
