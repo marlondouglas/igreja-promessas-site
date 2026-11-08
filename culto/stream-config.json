@@ -2,5 +2,6 @@
   "enabled": true,
   "format": "horizontal",
   "hlsPageUrl": "https://marlon-tiffany.tail7759a9.ts.net/culto",
-  "note": "Sinal HLS da igreja via Tailscale Funnel HTTPS. Sem transmissão, o site mostra espera; a publicação WHIP permanece restrita ao notebook."
+  "note": "Transmissão HLS via Tailscale Funnel. O player usa culto-aac apenas quando o servidor confirma H.264/AAC; caso contrário mantém culto. A publicação WHIP permanece restrita ao notebook.",
+  "hlsCompatiblePageUrl": "https://marlon-tiffany.tail7759a9.ts.net/culto-aac"
 }
