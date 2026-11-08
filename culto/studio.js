@@ -6,8 +6,66 @@
  const $=id=>document.getElementById(id);
  const canvas=$("program-canvas"),ctx=canvas.getContext("2d",{alpha:false});
  const logo=new Image();logo.src="/logo-promessas.svg";
- const vid=document.createElement("video");vid.autoplay=true;vid.muted=true;vid.playsInline=true;
+  const vid=document.createElement("video");vid.autoplay=true;vid.muted=true;vid.playsInline=true;
+  const displayVid=document.createElement("video");displayVid.autoplay=true;displayVid.muted=true;displayVid.playsInline=true;
+  let displayStream=null,activeSource="camera",displayAudioSource=null,displayAudioGain=null;
+  let lowerThirdMode="service",lowerThirdPrevious="service",lowerThirdSwitchedAt=0;
+  const transitionDuration=950;
+  let chosenMessageMode="lower";
+  function playPromessasSound(){
+    // Original discreet 0.65s signature; fully silent unless the operator opts in.
+    if(!$("card-sound")?.checked||phase!=="live"||!ac)return;
+    try{
+      if(ac.state==="suspended")return;
+      const startAt=ac.currentTime+.015;
+      const master=ac.createGain();
+      master.gain.setValueAtTime(.0001,startAt);
+      master.gain.exponentialRampToValueAtTime(.045,startAt+.10);
+      master.gain.exponentialRampToValueAtTime(.0001,startAt+.73);
+      master.connect(ac.destination);
+      if(mediaDest)master.connect(mediaDest);
+      [392,493.88,587.33].forEach((hz,i)=>{
+        const osc=ac.createOscillator(),gain=ac.createGain();
+        osc.type="sine";
+        osc.frequency.setValueAtTime(hz,startAt);
+        osc.frequency.exponentialRampToValueAtTime(hz*1.012,startAt+.55);
+        gain.gain.value=[.47,.23,.16][i];
+        osc.connect(gain);gain.connect(master);
+        osc.start(startAt+i*.045);osc.stop(startAt+.73);
+      });
+      setTimeout(()=>{try{master.disconnect();}catch(_){}},1100);
+    }catch(_){}
+  }
+  function selectMessageMode(mode){
+    const isAnimatedPix=$("card-type").value==="pix_animation";
+    chosenMessageMode=mode==="full"?"full":mode==="mini"&&isAnimatedPix?"mini":"lower";
+    document.querySelectorAll(".message-mode").forEach(b=>{
+      const selected=b.dataset.mode===chosenMessageMode;
+      b.classList.toggle("selected",selected);
+      b.setAttribute("aria-pressed",String(selected));
+    });
+    cardFeedback(chosenMessageMode==="mini"
+      ?"Animação pequena selecionada: QR Code fixo e tutorial em quatro passos, com repetição suave. O botão mostrado no vídeo é ilustrativo."
+      :chosenMessageMode==="full"
+        ?"Tela completa selecionada. A transição de ida e volta será automática."
+        :"Tarja inferior selecionada. A identificação do culto será substituída temporariamente.");
+  }
+  document.querySelectorAll(".message-mode").forEach(b=>b.addEventListener("click",()=>selectMessageMode(b.dataset.mode)));
+  function updatePixAnimationOption(){
+    const animation=$("card-type").value==="pix_animation";
+    $("card-mode-mini").hidden=!animation;
+    $("pix-animation-help").hidden=!animation;
+    document.querySelector(".message-mode-picker").classList.toggle("has-mini",animation);
+    if(!animation&&chosenMessageMode==="mini")selectMessageMode("lower");
+  }
  const music=$("music-bed");
+ const introMotion=document.createElement("video");
+ introMotion.src="/culto/assets/contagem-cinematica-licenca-igreja.mp4";
+ introMotion.muted=true;
+ introMotion.playsInline=true;
+ introMotion.loop=true;
+ introMotion.preload="metadata";
+ introMotion.crossOrigin="anonymous";
  let format="horizontal",phase="waiting",phaseStart=performance.now(),lastDraw=0;
  let cameraStream=null,camReady=false,recording=null,recordChunks=[],recordStream=null;
  let ac=null,mediaDest=null,musicSource=null,micSource=null,micGain=null;
@@ -17,50 +75,64 @@
  const motto="Resgatar almas e restaurar famílias";
  const fields={title:$("service-name"),address:$("address")};
  const fonts="Manrope, DM Sans, Arial, sans-serif";
+ const pixQR=new Image();pixQR.src="/pix-promessas.svg";
  // Cards informativos renderizados dentro do canvas da apresentação.
  // Texto do operador vai apenas para o Canvas, sem injeção HTML ou envio de dados.
  const cardPresets={
    verse:["PALAVRA DE DEUS","O Senhor é o meu pastor; nada me faltará.","Salmo 23:1"],
    notice:["AVISOS DA IGREJA","Seja bem-vindo! Confira nossa programação de cultos no site e aplicativo.","Igreja Ministério Promessas"],
    prayer:["MOMENTO DE ORAÇÃO","Apresente a Deus seu pedido de oração. Estamos unidos em fé.","Orando por sua família"],
-   event:["PRÓXIMO CULTO","Acompanhe os dias e os horários dos próximos cultos em nosso site.","igrejapromessas.site"]
+   event:["PRÓXIMO CULTO","Acompanhe os dias e os horários dos próximos cultos em nosso site.","igrejapromessas.site"],
+   pix:["OFERTAS E DÍZIMOS","Sua generosidade ajuda a transformar vidas e abençoar famílias.","PIX: iemp.promessas@gmail.com"],
+   pix_animation:["COMO OFERTAR COM PIX","Abra o app do banco, escolha Pix e leia o QR Code.","PIX: iemp.promessas@gmail.com"]
  };
  let cardState={active:false,started:0,until:0,config:null};
- function cardInput(){
+  function setLowerThird(mode){
+    if(lowerThirdMode===mode)return;
+    lowerThirdPrevious=lowerThirdMode;
+    lowerThirdMode=mode;
+    lowerThirdSwitchedAt=performance.now();
+    playPromessasSound();
+  }
+  function cardInput(){
    return {
      type:$("card-type").value,
      heading:$("card-heading").value.trim().slice(0,65),
      message:$("card-message").value.trim().slice(0,380),
      reference:$("card-reference").value.trim().slice(0,80),
-     position:$("card-position").value,
+      position:"lower",
      style:$("card-style").value,
      duration:Math.max(0,Number($("card-duration").value)||0)
    };
  }
  function cardFeedback(message){$("card-feedback").textContent=message;}
  function updateCardControls(){
-   $("card-show").textContent=cardState.active?"✦ Atualizar card na imagem":"✦ Exibir card na imagem";
+    $("card-show").textContent=cardState.active?"✦ Atualizar mensagem":"✦ Exibir mensagem";
    $("card-hide").disabled=!cardState.active;
  }
  $("card-type").addEventListener("change",()=>{
    const data=cardPresets[$("card-type").value]||cardPresets.verse;
    $("card-heading").value=data[0];$("card-message").value=data[1];$("card-reference").value=data[2];
+   updatePixAnimationOption();
    cardFeedback("Modelo preparado. Edite o conteúdo e clique em Exibir card.");
  });
+ updatePixAnimationOption();
  $("card-show").addEventListener("click",()=>{
    const config=cardInput();
    if(!config.heading&&!config.message){
      cardFeedback("Digite um título ou uma mensagem para exibir.");
      $("card-message").focus();return;
    }
-   cardState={active:true,started:phase==="intro"||phase==="countdown"?0:performance.now(),until:0,config};
+    cardState={active:true,started:phase==="intro"||phase==="countdown"?0:performance.now(),until:0,config};
+    setLowerThird(chosenMessageMode==="full"?"full":chosenMessageMode==="mini"&&config.type==="pix_animation"?"mini":"message");
    if(cardState.started&&config.duration>0)cardState.until=cardState.started+config.duration*1000;
    cardFeedback(phase==="waiting"?"Card visível no monitor de ensaio. Ele também aparecerá na cena da câmera.":phase==="live"?"Card inserido na imagem da câmera, com animação suave.":"Card preparado. Ele aparecerá na câmera depois da abertura.");
    updateCardControls();
  });
  $("card-hide").addEventListener("click",()=>{
-   cardState.active=false;
-   cardFeedback("Card ocultado. A imagem voltou sem essa informação.");
+    cardState.active=false;
+    setLowerThird("service");
+    cardFeedback("Mensagem encerrada. A câmera e a identificação do culto retornam automaticamente com a transição Promessas.");
    updateCardControls();
  });
  const cardThemes={
@@ -90,64 +162,230 @@
    if(line&&lines.length<maxLines)lines.push(line);
    return lines;
  }
- function drawInformationCard(now){
-   if(!cardState.active||!cardState.config)return;
-   if(cardState.started===0){
-     cardState.started=now;
-     if(cardState.config.duration>0)cardState.until=now+cardState.config.duration*1000;
-   }
-   const elapsed=Math.max(0,(now-cardState.started)/1000);
-   if(cardState.until&&now>=cardState.until){
-     cardState.active=false;updateCardControls();
-     cardFeedback("O tempo de exibição terminou. Você pode mostrar esse card novamente.");
-     return;
-   }
-   const c=cardState.config,palette=cardThemes[c.style]||cardThemes.gold;
-   const v=format==="vertical",w=canvas.width,h=canvas.height;
-   const bw=w*(v?.90:.86),bx=(w-bw)/2;
-   const padding=v?24:30;
-   const titleFont=v?20:19;
-   const bodyFont=v?28:30;
-   const subFont=v?17:18;
-   const contentWidth=bw-2*padding-14;
-   ctx.save();
-   ctx.font="700 "+bodyFont+"px "+fonts;
-   const lines=cardLines(c.message,contentWidth,v?4:3);
-   const lineHeight=bodyFont*1.33;
-   const showTitle=!!c.heading,showReference=!!c.reference;
-   const height=padding+(showTitle?titleFont+21:0)+(lines.length?lines.length*lineHeight:0)+(showReference?subFont+23:0)+padding;
-   let y;
-   if(c.position==="upper")y=h*(v?.165:.18);
-   else if(c.position==="middle")y=h*.48-height/2;
-   else y=h*(v?.755:.775)-height; // Above the fixed church lower-third.
-   y=Math.max(h*.11,Math.min(y,h-height-h*.12));
-   const opacity=Math.min(1,elapsed/.5,cardState.until?Math.max(0,(cardState.until-now)/480):1);
-   ctx.globalAlpha=opacity;
-   ctx.shadowColor="rgba(0,0,0,.42)";ctx.shadowBlur=24;ctx.shadowOffsetY=10;
-   roundRect(bx,y,bw,height,Math.min(22,w*.024),palette.bg);
-   ctx.shadowColor="transparent";ctx.shadowBlur=0;ctx.shadowOffsetY=0;
-   roundRect(bx,y,Math.max(6,w*.006),height,4,palette.line);
-   let cursor=y+padding;
-   if(showTitle){
-     ctx.font="800 "+titleFont+"px "+fonts;
-     text(clampCanvasText(c.heading.toUpperCase(),contentWidth-65),bx+padding,cursor+titleFont*.45,titleFont,palette.title,800,"left");
-     if(logo.complete&&logo.naturalWidth>0){
-       const iconSize=v?37:42;
-       ctx.drawImage(logo,bx+bw-padding-iconSize,cursor-11,iconSize,iconSize);
-     }
-     cursor+=titleFont+21;
-   }
-   for(const line of lines){
-     text(line,bx+padding,cursor+bodyFont*.5,bodyFont,palette.body,700,"left",contentWidth);
-     cursor+=lineHeight;
-   }
-   if(showReference){
-     cursor+=8;
-     ctx.font="700 "+subFont+"px "+fonts;
-     text(clampCanvasText(c.reference,contentWidth),bx+padding,cursor+subFont*.4,subFont,palette.small,700,"left");
-   }
-   ctx.restore();
- }
+  function drawChurchLowerThird(opacity=1,shift=0){
+    const v=format==="vertical",w=canvas.width,h=canvas.height;
+    const bw=w*(v?.92:.88),bx=(w-bw)/2,barH=h*(v?.137:.135),by=h*(v?.965:.958)-barH;
+    ctx.save();ctx.globalAlpha=opacity;ctx.translate(0,shift);
+    ctx.shadowColor="#0008";ctx.shadowBlur=25;ctx.shadowOffsetY=10;
+    roundRect(bx,by,bw,barH,Math.min(23,w*.025),"rgba(13,18,28,.91)");
+    ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+    roundRect(bx,by,Math.max(6,w*.006),barH,4,"#e9bb76");
+    const logoS=v?68:72,logoX=bx+(v?55:66),logoY=by+barH*.50;
+    if(logo.complete&&logo.naturalWidth)ctx.drawImage(logo,logoX-logoS*.45,logoY-logoS*.45,logoS*.9,logoS*.9);
+    const left=logoX+logoS*.73;
+    text(fields.title.value.trim()||"Culto da Família",left,by+barH*.37,v?29:39,"#fff2d9",800,"left",bw-(left-bx)-22);
+    ctx.font="600 "+(v?16:19)+"px "+fonts;
+    text(clampCanvasText(fields.address.value.replace(/[\r\n]+/g," ").trim(),bw-(left-bx)-24),left,by+barH*.76,v?16:19,"#d5c5b4",600,"left",bw-(left-bx)-24);
+    ctx.restore();
+  }
+  function drawMessageLowerThird(now,opacity=1,shift=0){
+    const c=cardState.config;
+    if(!c)return;
+    const v=format==="vertical",w=canvas.width,h=canvas.height;
+    const bw=w*(v?.92:.88),bx=(w-bw)/2,barH=h*(v?.215:.185),by=h*(v?.965:.958)-barH;
+    const palette=cardThemes[c.style]||cardThemes.gold;
+    const padding=v?26:29,bodySize=v?24:28,titleSize=v?18:19;
+    const isPix=c.type==="pix"||c.type==="pix_animation";
+    const contentWidth=bw-padding*2-(isPix?Math.min(150,barH*.96):65);
+    ctx.save();ctx.globalAlpha=opacity;ctx.translate(0,shift);
+    ctx.shadowColor="#000b";ctx.shadowBlur=29;ctx.shadowOffsetY=10;
+    roundRect(bx,by,bw,barH,Math.min(23,w*.025),palette.bg);
+    ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+    roundRect(bx,by,Math.max(6,w*.006),barH,4,palette.line);
+    const left=bx+padding,top=by+padding;
+    ctx.font="700 "+bodySize+"px "+fonts;
+    const tutorial=c.type==="pix_animation"?pixTutorialStep(now):null;
+    const lines=cardLines(tutorial?tutorial.detail:c.message,contentWidth,v?3:2);
+    text(tutorial?tutorial.label:(c.heading||"PALAVRA DE DEUS").toUpperCase(),left,top+titleSize*.32,titleSize,palette.title,800,"left",contentWidth-8);
+    if(logo.complete&&logo.naturalWidth){
+      const size=v?42:46;ctx.drawImage(logo,bx+bw-padding-size,top-11,size,size);
+    }
+    const bodyStart=by+barH*(v?.40:.41),lineSpace=bodySize*1.17;
+    lines.forEach((line,i)=>text(line,left,bodyStart+i*lineSpace,bodySize,palette.body,700,"left",contentWidth));
+    if(c.reference)text(c.reference,left,by+barH*.88,v?15:17,palette.small,800,"left",contentWidth);
+    if(isPix&&pixQR.complete&&pixQR.naturalWidth){
+      const q=Math.min(barH*.76,112),qx=bx+bw-q-15,qy=by+(barH-q)/2;
+      roundRect(qx-5,qy-5,q+10,q+10,8,"#fff");
+      ctx.drawImage(pixQR,qx,qy,q,q);
+    }
+    ctx.restore();
+  }
+  function drawFullMessage(now,opacity=1){
+    const c=cardState.config;
+    if(!c)return;
+    const w=canvas.width,h=canvas.height,v=format==="vertical";
+    const pal=cardThemes[c.style]||cardThemes.gold;
+    ctx.save();
+    ctx.globalAlpha=Math.max(0,Math.min(1,opacity));
+    const fill=ctx.createLinearGradient(0,0,w,h);
+    fill.addColorStop(0,c.style==="purple"?"#180e30":c.style==="blue"?"#0a1c31":"#0b1320");
+    fill.addColorStop(1,c.style==="purple"?"#342048":c.style==="blue"?"#132b41":"#302433");
+    ctx.fillStyle=fill;ctx.fillRect(0,0,w,h);
+    const glow=ctx.createRadialGradient(w*.65,h*.36,10,w*.52,h*.46,w*.85);
+    glow.addColorStop(0,c.style==="purple"?"#9470e044":"#e7bf7945");
+    glow.addColorStop(1,"transparent");
+    ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
+    // Gold rings and a restrained spotlight keep the presentation recognizably Promessas.
+    for(let i=0;i<3;i++){
+      ctx.beginPath();ctx.ellipse(w*.52,h*.35,w*(.21+i*.12),h*(.16+i*.09),-.12,0,Math.PI*2);
+      ctx.strokeStyle="rgba(230,191,124,"+(.26-i*.07)+")";ctx.lineWidth=Math.max(1,w*.0018);ctx.stroke();
+    }
+    const border=Math.max(13,w*.018);
+    ctx.strokeStyle=pal.line+"88";ctx.lineWidth=Math.max(2,w*.002);
+    ctx.strokeRect(border,border,w-2*border,h-2*border);
+    if(c.type==="pix"||c.type==="pix_animation"){
+      logoAt(w/2,h*(v?.10:.12),Math.min(w*.17,h*.13));
+      text("IGREJA MINISTÉRIO PROMESSAS",w/2,h*(v?.175:.23),v?22:23,"#f5d6a0",800,"center",w*.90);
+      text("OFERTAS E DÍZIMOS",w/2,h*(v?.245:.32),v?32:43,pal.title,800,"center",w*.90);
+      const isTutorial=c.type==="pix_animation";
+      const step=isTutorial?pixTutorialStep(now):null;
+      text(isTutorial?step.label:"Sua generosidade ajuda a transformar vidas.",w/2,h*(v?.325:.39),v?20:24,pal.body,600,"center",w*.91);
+      const q=Math.min(w*(v?.57:.26),h*(v?.265:.39));
+      const qx=(w-q)/2,qy=h*(v?.38:.43);
+      roundRect(qx-11,qy-11,q+22,q+22,16,"#fff");
+      if(pixQR.complete&&pixQR.naturalWidth)ctx.drawImage(pixQR,qx,qy,q,q);
+      text("PIX: iemp.promessas@gmail.com",w/2,h*(v?.73:.87),v?23:25,"#fff2d5",800,"center",w*.94);
+      text("Recebedor: Igreja Evangélica Ministério Promessas",w/2,h*(v?.80:.925),v?16:17,"#d6c6ad",600,"center",w*.94);
+      text("Confira o nome do recebedor no seu banco antes de confirmar.",w/2,h*(v?.88:.97),v?14:15,"#c8b8a0",500,"center",w*.94);
+      ctx.restore();return;
+    }
+    logoAt(w/2,h*(v?.18:.20),Math.min(w*.23,h*.25));
+    text(church,w/2,h*(v?.30:.355),v?18:18,"#e5cb9b",800,"center",w*.92);
+    const headFont=v?26:27;
+    text((c.heading||"PALAVRA DE DEUS").toUpperCase(),w/2,h*(v?.375:.43),headFont,pal.title,800,"center",w*.87);
+    const maxWidth=w*(v?.81:.77);
+    const bodyMaxH=h*(v?.31:.30);
+    let fontSize=v?37:43,lines=[];
+    while(fontSize>=18){
+      ctx.font="700 "+fontSize+"px "+fonts;
+      lines=cardLines(c.message,maxWidth,12);
+      if(lines.length*fontSize*1.26<=bodyMaxH)break;
+      fontSize-=2;
+    }
+    const lineHeight=fontSize*1.26,centerY=h*(v?.565:.625);
+    const startY=centerY-(lines.length-1)*lineHeight/2;
+    lines.forEach((line,i)=>text(line,w/2,startY+i*lineHeight,fontSize,pal.body,700,"center",maxWidth));
+    if(c.reference)text(c.reference,w/2,h*(v?.78:.865),v?22:24,pal.small,700,"center",maxWidth);
+    const footY=h*(v?.9:.94);
+    text(motto,w/2,footY,v?15:17,"#c0ac94",600,"center",w*.90);
+    ctx.restore();
+  }
+  function drawPromessasSweep(now,mix,full){
+    // Brief logo + light sweep synchronized to the fullscreen transition.
+    const p=Math.max(0,Math.min(1,mix)),w=canvas.width,h=canvas.height;
+    const brightness=Math.sin(p*Math.PI);
+    if(brightness<=.015)return;
+    ctx.save();ctx.globalAlpha=brightness*(full?.66:.31);
+    const centerX=w*(.08+.84*p);
+    const g=ctx.createLinearGradient(centerX-w*.26,0,centerX+w*.26,0);
+    g.addColorStop(0,"rgba(241,199,128,0)");
+    g.addColorStop(.47,"rgba(244,214,164,.28)");
+    g.addColorStop(.50,"rgba(255,241,217,.72)");
+    g.addColorStop(.53,"rgba(244,214,164,.28)");
+    g.addColorStop(1,"rgba(241,199,128,0)");
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+    if(full){
+      const size=Math.min(w*.095,h*.14)*(1+.12*brightness);
+      logoAt(w*.50,h*.50,size,brightness*.85);
+    }
+    ctx.restore();
+  }
+
+  const pixTutorialSteps=[
+    {label:"1  ABRA SEU BANCO",detail:"Acesse o aplicativo do seu banco"},
+    {label:"2  TOQUE EM PIX",detail:"Escolha a opção de pagamento Pix"},
+    {label:"3  LEIA O QR CODE",detail:"Aponte a câmera para o código"},
+    {label:"4  CONFIRA O NOME",detail:"Igreja Evangélica Ministério Promessas"}
+  ];
+  function pixTutorialStep(now){
+    const started=cardState.started||now;
+    return pixTutorialSteps[Math.floor(Math.max(0,now-started)/3400)%pixTutorialSteps.length];
+  }
+  function drawPixMiniAnimation(now,opacity=1,shift=0){
+    const w=canvas.width,h=canvas.height,v=format==="vertical";
+    const pal=cardThemes[cardState.config?.style]||cardThemes.gold;
+    const bw=w*(v?.89:.46),bh=h*(v?.185:.268);
+    const bx=w-bw-w*(v?.055:.034),by=h-bh-h*(v?.040:.049);
+    const step=pixTutorialStep(now),stepIndex=pixTutorialSteps.indexOf(step);
+    const elapsed=Math.max(0,now-(cardState.started||now));
+    const pulse=.5+.5*Math.sin(elapsed*.0052);
+    const padding=v?17:17;
+    const q=Math.min(bh*.69,bw*(v?.21:.255));
+    const qx=bx+bw-q-padding-3,qy=by+(bh-q)/2+3;
+    const contentWidth=qx-bx-padding-13;
+    ctx.save();
+    ctx.globalAlpha=Math.max(0,Math.min(1,opacity));
+    ctx.translate(0,shift);
+    ctx.shadowColor="rgba(0,0,0,.58)";ctx.shadowBlur=24;ctx.shadowOffsetY=9;
+    roundRect(bx,by,bw,bh,Math.min(20,w*.025),"rgba(11,19,32,.97)");
+    ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+    roundRect(bx,by,Math.max(5,w*.004),bh,4,pal.line);
+    const labelSize=v?16:17;
+    const headY=by+bh*(v?.19:.19);
+    text("DÍZIMOS E OFERTAS",bx+padding,headY,labelSize,pal.title,800,"left",contentWidth);
+    const subY=by+bh*(v?.35:.37);
+    text("COMO FAZER SEU PIX",bx+padding,subY,v?15:18,"#fff5dd",800,"left",contentWidth);
+    // The arrow simulates a tap on a button — it does NOT pretend the broadcast image is clickable.
+    const buttonX=bx+padding,buttonY=by+bh*(v?.42:.44);
+    const buttonW=Math.min(contentWidth*.63,v?143:165),buttonH=Math.min(bh*.19,v?37:36);
+    roundRect(buttonX,buttonY,buttonW,buttonH,9,"rgba(234,195,130,"+(.17+.16*pulse)+")");
+    ctx.strokeStyle="rgba(247,212,153,.75)";ctx.lineWidth=1;
+    ctx.strokeRect(buttonX+1,buttonY+1,buttonW-2,buttonH-2);
+    text("CLIQUE AQUI",buttonX+buttonW/2,buttonY+buttonH*.62,v?12:14,"#ffedd3",800,"center",buttonW-8);
+    // Animated tap ring near the illustrative button.
+    const tX=buttonX+buttonW+11,tY=buttonY+buttonH*.55;
+    ctx.beginPath();ctx.arc(tX,tY,5+7*pulse,0,Math.PI*2);
+    ctx.strokeStyle="rgba(242,200,130,"+(1-.75*pulse)+")";ctx.lineWidth=2;ctx.stroke();
+    const detailWidth=contentWidth;
+    text(step.label,bx+padding,by+bh*(v?.77:.79),v?15:18,"#ffffff",800,"left",detailWidth);
+    text(clampCanvasText(step.detail,detailWidth),bx+padding,by+bh*(v?.91:.92),v?12:13,"#d1c5b6",600,"left",detailWidth);
+    // Grounded QR is static and never obscured; only the outer guide corners pulse.
+    roundRect(qx-7,qy-7,q+14,q+14,9,"#ffffff");
+    if(pixQR.complete&&pixQR.naturalWidth)ctx.drawImage(pixQR,qx,qy,q,q);
+    ctx.strokeStyle="rgba(245,199,121,"+(.40+.5*pulse)+")";
+    ctx.lineWidth=2.5;
+    const cs=14;
+    ctx.beginPath();
+    ctx.moveTo(qx-10,qy+cs);ctx.lineTo(qx-10,qy-10);ctx.lineTo(qx+cs,qy-10);
+    ctx.moveTo(qx+q-cs,qy-10);ctx.lineTo(qx+q+10,qy-10);ctx.lineTo(qx+q+10,qy+cs);
+    ctx.moveTo(qx-10,qy+q-cs);ctx.lineTo(qx-10,qy+q+10);ctx.lineTo(qx+cs,qy+q+10);
+    ctx.moveTo(qx+q-cs,qy+q+10);ctx.lineTo(qx+q+10,qy+q+10);ctx.lineTo(qx+q+10,qy+q-cs);
+    ctx.stroke();
+    // Four tiny progress indicators show the short loop.
+    for(let i=0;i<4;i++){
+      ctx.fillStyle=i===stepIndex?pal.line:"rgba(255,255,255,.20)";
+      ctx.beginPath();ctx.arc(bx+padding+i*12,by+bh-9,v?2.2:2.5,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  }
+  function drawLowerThird(now){
+    if(cardState.active && cardState.config && cardState.started===0 && phase==="live"){
+      cardState.started=now;
+      if(cardState.config.duration)cardState.until=now+cardState.config.duration*1000;
+    }
+    if(cardState.active&&cardState.until&&now>=cardState.until){
+      cardState.active=false;setLowerThird("service");updateCardControls();
+      cardFeedback("A mensagem terminou. A câmera e o título do culto voltaram automaticamente.");
+    }
+    const elapsed=Math.max(0,now-lowerThirdSwitchedAt);
+    const inMotion=elapsed<transitionDuration&&lowerThirdPrevious!==lowerThirdMode;
+    const drawMode=(mode,alpha,shift)=>{
+      if(alpha<=0.005)return;
+      if(mode==="full")drawFullMessage(now,alpha);
+      else if(mode==="mini")drawPixMiniAnimation(now,alpha,shift);
+      else if(mode==="message")drawMessageLowerThird(now,alpha,shift);
+      else drawChurchLowerThird(alpha,shift);
+    };
+    if(inMotion){
+      const p=elapsed/transitionDuration,ease=p*p*(3-2*p);
+      const full=lowerThirdPrevious==="full"||lowerThirdMode==="full";
+      drawMode(lowerThirdPrevious,1-ease,-38*ease);
+      drawMode(lowerThirdMode,ease,38*(1-ease));
+      drawPromessasSweep(now,p,full);
+    }else{
+      drawMode(lowerThirdMode,1,0);
+    }
+  }
 
  const transitions={countdown:"PREPARAÇÃO",intro:"ABERTURA",live:"CÂMERA",paused:"PAUSA",outro:"ENCERRAMENTO",waiting:"EM ESPERA",done:"FINALIZADO"};
  const phrases=[
@@ -177,7 +415,7 @@
  function status(s){lastStatus=s;$("stream-notice").textContent=s;}
  function setPhase(p){
    phase=p;phaseStart=performance.now();
-   if(p==="outro"||p==="done"){cardState.active=false;updateCardControls();}
+    if(p==="outro"||p==="done"){cardState.active=false;setLowerThird("service");updateCardControls();}
    if(p==="live"&&cardState.active&&cardState.started===0){
      cardState.started=performance.now();
      if(cardState.config?.duration>0)cardState.until=cardState.started+cardState.config.duration*1000;
@@ -195,7 +433,10 @@
    $("resume").hidden=p!=="paused";
    $("end").disabled=!["live","paused","intro"].includes(p);
    $("end").hidden=p==="outro";
-   if(micGain)micGain.gain.value=(p==="live")?1:0;
+    applySourceAudio();
+   if(p==="intro"){
+     try{introMotion.currentTime=0;introMotion.play().catch(()=>{});}catch(_){}
+   }else introMotion.pause();
    if(p==="intro"||p==="outro")musicOn();
    else musicOff();
    window.dispatchEvent(new CustomEvent("promessas-scene",{detail:{phase:p}}));
@@ -270,6 +511,85 @@
    }finally{$("prepare-camera").disabled=false;}
  }
  $("prepare-camera").addEventListener("click",prepareCamera);
+  function sourceStatus(message){$("screen-feedback").textContent=message;}
+  function setActiveSource(mode){
+    activeSource=mode==="screen"?"screen":"camera";
+    const isScreen=activeSource==="screen";
+    $("source-camera").classList.toggle("selected",!isScreen);
+    $("source-screen").classList.toggle("selected",isScreen);
+    $("source-camera").setAttribute("aria-pressed",String(!isScreen));
+    $("source-screen").setAttribute("aria-pressed",String(isScreen));
+    applySourceAudio();
+  }
+  function applySourceAudio(){
+    const live=phase==="live";
+    if(micGain)micGain.gain.value=live&&(activeSource==="camera"||(activeSource==="screen"&&$("screen-mic").checked))?1:0;
+    if(displayAudioGain)displayAudioGain.gain.value=live&&activeSource==="screen"?1:0;
+  }
+  function attachDisplayAudio(){
+    if(!ac||!mediaDest||!displayStream?.getAudioTracks().length||displayAudioSource)return;
+    try{
+      displayAudioSource=ac.createMediaStreamSource(displayStream);
+      displayAudioGain=ac.createGain();displayAudioGain.gain.value=0;
+      displayAudioSource.connect(displayAudioGain);displayAudioGain.connect(mediaDest);
+      applySourceAudio();
+    }catch(e){sourceStatus("A tela foi selecionada, mas não foi possível incluir o áudio: "+e.message);}
+  }
+  function stopScreen(){
+    const had=!!displayStream;
+    if(displayStream){for(const track of displayStream.getTracks())track.stop();}
+    displayStream=null;displayVid.srcObject=null;
+    if(displayAudioSource){try{displayAudioSource.disconnect();}catch(e){}displayAudioSource=null;}
+    if(displayAudioGain){try{displayAudioGain.disconnect();}catch(e){}displayAudioGain=null;}
+    $("stop-share").hidden=true;
+    if(activeSource==="screen"){
+      setActiveSource("camera");
+      if(phase==="live"&&!camReady){reason="camera";setPhase("paused");}
+    }
+    if(had)sourceStatus("Compartilhamento encerrado. A fonte voltou para a câmera.");
+  }
+  async function shareScreen(){
+    if(!navigator.mediaDevices?.getDisplayMedia){
+      sourceStatus("Compartilhamento de tela indisponível. Use o Chrome/Edge no notebook em HTTPS ou localhost.");return false;
+    }
+    try{
+      // getDisplayMedia must be called synchronously from the operator's direct click.
+      const stream=await navigator.mediaDevices.getDisplayMedia({
+        video:{frameRate:{ideal:24,max:30}},
+        audio:{echoCancellation:false,noiseSuppression:false},
+        preferCurrentTab:false,
+        selfBrowserSurface:"exclude",
+        surfaceSwitching:"include"
+      });
+      if(displayStream)stopScreen();
+      displayStream=stream;
+      displayVid.srcObject=stream;
+      displayVid.muted=true;displayVid.playsInline=true;
+      await displayVid.play();
+      const track=stream.getVideoTracks()[0];
+      if(track)track.addEventListener("ended",stopScreen,{once:true});
+      setActiveSource("screen");
+      attachDisplayAudio();
+      $("stop-share").hidden=false;
+      const audio=stream.getAudioTracks().length>0;
+      sourceStatus(audio
+        ?"✓ Tela/aba selecionada COM áudio. O culto transmitirá esta fonte com a tarja da igreja."
+        :"✓ Tela/aba selecionada SEM áudio. Para enviar o som do YouTube, compartilhe a guia marcando o áudio.");
+      return true;
+    }catch(error){
+      sourceStatus(error?.name==="NotAllowedError"?"Você cancelou a seleção. Nenhuma tela está sendo transmitida.":"Não foi possível compartilhar: "+(error?.message||"erro"));
+      return false;
+    }
+  }
+  $("source-camera").addEventListener("click",()=>setActiveSource("camera"));
+  $("source-screen").addEventListener("click",()=>{
+    if(displayStream)setActiveSource("screen");
+    else shareScreen();
+  });
+  $("choose-screen").addEventListener("click",shareScreen);
+  $("stop-share").addEventListener("click",stopScreen);
+  $("screen-mic").addEventListener("change",applySourceAudio);
+
  async function audioSetup(){
    // Composition audio for local rehearsal only. Microphone is never looped to speakers.
    if(ac)return;
@@ -286,7 +606,9 @@
        micGain=ac.createGain();micGain.gain.value=0;
        micSource.connect(micGain);micGain.connect(mediaDest);
      }
-   }catch(err){$("record-status").textContent="Áudio de gravação indisponível";}
+      attachDisplayAudio();
+      applySourceAudio();
+    }catch(err){$("record-status").textContent="Áudio de gravação indisponível";}
  }
  async function musicOn(){
    if(!music)return;
@@ -300,10 +622,13 @@
  function musicOff(){if(music){music.pause();}}
  async function start(){
    if(!["waiting","done"].includes(phase))return;
-   if(!(await prepareCamera())){
-     status("Prepare a câmera e o microfone antes de iniciar. A prévia permanece local.");
-     return;
-   }
+    if(activeSource==="screen"){
+      if(!displayStream||displayStream.getVideoTracks().every(t=>t.readyState!=="live")){
+        status("Selecione primeiro a aba, janela ou tela que deseja transmitir.");return;
+      }
+    }else if(!(await prepareCamera())){
+      status("Prepare a câmera e o microfone antes de iniciar. A prévia permanece local.");return;
+    }
    introSeconds=$("test-mode").checked?15:300;
    outroSeconds=$("test-mode").checked?12:35;
    await audioSetup();
@@ -396,45 +721,101 @@
  }
  function drawIntro(t){
    const w=canvas.width,h=canvas.height,v=format==="vertical";
-   background(t);topMark();
-   const idx=Math.floor(t/Math.max(3,introSeconds/6))%phrases.length;
+   // A real, licensed motion backdrop; blur intentionally masks the source's embedded English timer.
+   // All church identity, clock, graphics and typography are drawn fresh into our transmitted canvas.
+   if(introMotion.readyState>=2&&introMotion.videoWidth>0){
+     const sw=introMotion.videoWidth,sh=introMotion.videoHeight,zoom=1.045+.018*Math.sin(t*.12);
+     const sc=Math.max(w/sw,h/sh)*zoom,dw=sw*sc,dh=sh*sc;
+     ctx.save();
+     ctx.filter="blur("+Math.max(19,w*.024)+"px) brightness(.45) saturate(1.45)";
+     ctx.drawImage(introMotion,(w-dw)/2,(h-dh)/2,dw,dh);
+     ctx.restore();
+   }else background(t);
+   // Layered midnight-blue/light-gold finish to make the 5-minute time the focus.
+   const veil=ctx.createLinearGradient(0,0,w,h);
+   veil.addColorStop(0,"#070b15b8");
+   veil.addColorStop(.54,"#0f122e95");
+   veil.addColorStop(1,"#060b17df");
+   ctx.fillStyle=veil;ctx.fillRect(0,0,w,h);
+   const golden=ctx.createRadialGradient(w*.47,h*.33,5,w*.48,h*.37,w*.71);
+   golden.addColorStop(0,"#e9b86452");golden.addColorStop(.48,"#9577d32b");
+   golden.addColorStop(1,"#0f183100");
+   ctx.fillStyle=golden;ctx.fillRect(0,0,w,h);
+   const phaseTime=t*(introSeconds===15?20:1);
+   const beat=Math.max(0,Math.sin(t*2.4));
+   const border=Math.max(12,w*.019);
+   ctx.save();
+   ctx.globalAlpha=.64;
+   ctx.strokeStyle="#dbb77a95";ctx.lineWidth=Math.max(2,w*.002);
+   ctx.strokeRect(border,border,w-2*border,h-2*border);
+   // Subtle moving beams.
+   ctx.translate(w*.5,h*.39);ctx.rotate(Math.sin(t*.09)*.055);
+   for(let i=0;i<3;i++){
+      ctx.beginPath();ctx.ellipse(0,0,w*(.23+i*.11),h*(.16+i*.075),-.17,0,Math.PI*2);
+      ctx.strokeStyle="rgba(240,190,116,"+(.30-i*.07)+")";ctx.lineWidth=Math.max(2,w*.002);ctx.stroke();
+   }
+   ctx.restore();
+   // A gleaming large church logo takes visual priority.
+   logoAt(w/2,h*(v?.235:.228),Math.min(w*(v?.43:.30),h*(v?.25:.35)));
+   const sloganY=h*(v?.372:.43);
+   text("IGREJA MINISTÉRIO PROMESSAS",w/2,sloganY,v?24:28,"#f5dbb1",800,"center",w*.88);
+   ctx.globalAlpha=.6;
+   roundRect(w*.35,sloganY+(v?22:23),w*.30,Math.max(3,h*.0028),8,"#e0b26c");
+   ctx.globalAlpha=1;
+   const phrasesCount=phrases.length;
+   const idx=Math.min(phrasesCount-1,Math.floor(t/introSeconds*phrasesCount));
    const phrase=phrases[idx];
-   const top=h*(v?.29:.31);
-   logoAt(w/2,top,Math.min(w*.24,h*.23));
-   const scale=v?.68:1;
-   text(phrase[0],w/2,h*(v?.51:.60),Math.min(w*.075,53)*scale,"#fff1d5",800,"center",w*.91);
-   text(phrase[1],w/2,h*(v?.566:.70),Math.min(w*.047,30)*scale,"#edc78e",700,"center",w*.89);
-   const remain=Math.max(0,Math.ceil(introSeconds-t));
-   const mm=String(Math.floor(remain/60)).padStart(2,"0"),ss=String(remain%60).padStart(2,"0");
-   text("O CULTO COMEÇA EM",w/2,h*(v?.75:.83),v?19:19,"#d7d0c5",700,"center",w*.88);
-   text(mm+":"+ss,w/2,h*(v?.804:.90),v?51:36,"#f6d8a1",800);
-   const barW=w*.58;roundRect((w-barW)/2,h*.951,barW,Math.max(4,h*.006),8,"#c6ab7945");
-   roundRect((w-barW)/2,h*.951,barW*Math.min(1,t/introSeconds),Math.max(4,h*.006),8,"#e8c486");
+   const segment=(t/(introSeconds/phrasesCount))%1;
+   const easeIn=Math.min(1,segment*5),easeOut=Math.min(1,(1-segment)*5),textOpacity=Math.max(.07,Math.min(easeIn,easeOut));
+   ctx.save();
+   ctx.globalAlpha=textOpacity;
+   text(phrase[0],w/2,h*(v?.458:.525),v?33:45,"#fff4e6",800,"center",w*.89);
+   text(phrase[1],w/2,h*(v?.505:.602),v?21:27,"#d7b88c",700,"center",w*.89);
+   ctx.restore();
+   // Always count five minutes; the test runs the five-minute sequence in fifteen seconds.
+   const remain=Math.max(0,Math.ceil(300*(1-t/introSeconds)));
+   const clock=String(Math.floor(remain/60)).padStart(2,"0")+":"+String(remain%60).padStart(2,"0");
+   const clockX=w/2,clockY=h*(v?.706:.757);
+   const timerWidth=w*(v?.64:.40),timerHeight=h*(v?.105:.16);
+   roundRect(clockX-timerWidth/2,clockY-timerHeight*.62,timerWidth,timerHeight,Math.min(28,w*.023),"rgba(9,13,24,.76)");
+   ctx.strokeStyle="#d9b68088";ctx.lineWidth=Math.max(2,w*.002);ctx.strokeRect(clockX-timerWidth/2+2,clockY-timerHeight*.62+2,timerWidth-4,timerHeight-4);
+   text("O CULTO COMEÇA EM",w/2,clockY-timerHeight*.84,v?17:21,"#e5bf82",800,"center",w*.75);
+   text(clock,clockX,clockY+timerHeight*.075,v?82:108,"#ffefd3",800,"center",timerWidth*.88);
+   const nearEnd=remain<=15,flash=nearEnd?Math.abs(Math.sin(t*5))*.26:0;
+   if(flash>0){ctx.fillStyle="rgba(255,213,136,"+flash+")";ctx.fillRect(0,0,w,h);}
+   text(motto,w/2,h*(v?.846:.922),v?18:22,"#e1ca9f",700,"center",w*.88);
+   // Visible progress follows the true 300s clock; latest seconds resolve into the camera.
+   const progressWidth=w*.70,progressTop=h*(v?.925:.969);
+   roundRect((w-progressWidth)/2,progressTop,progressWidth,Math.max(5,h*.006),7,"#fff3d244");
+   roundRect((w-progressWidth)/2,progressTop,progressWidth*Math.min(1,t/introSeconds),Math.max(5,h*.006),7,"#f1c884");
  }
  function drawCamera(t){
-   const w=canvas.width,h=canvas.height,v=format==="vertical";
-   if(vid.readyState>=2&&vid.videoWidth){
-     const sw=vid.videoWidth,sh=vid.videoHeight,scale=Math.max(w/sw,h/sh);
-     const cw=w/scale,ch=h/scale;
-     ctx.drawImage(vid,(sw-cw)/2,(sh-ch)/2,cw,ch,0,0,w,h);
-   }else{background(t,"pause");text("A câmera está preparando a imagem…",w/2,h/2,v?22:27,"#d9c194",600);}
-   const grad=ctx.createLinearGradient(0,h*.65,0,h);
-   grad.addColorStop(0,"rgba(10,15,24,0)");grad.addColorStop(1,"rgba(5,10,17,.94)");
-   ctx.fillStyle=grad;ctx.fillRect(0,h*.63,w,h*.37);
-   const badgeW=v?170:145;roundRect(w-badgeW-25,25,badgeW,38,12,"#6c1e27df");
-   text("● EM PRODUÇÃO",w-badgeW/2-25,44,v?15:14,"#fff7f2",800);
-   const bottom=h*(v?.86:.845);
-   const bx=w*(v?.045:.065),by=bottom-h*(v?.055:.035);
-   const bandW=w*(v?.91:.86),bandH=h*(v?.13:.14);
-   roundRect(bx,by,bandW,bandH,Math.min(26,w*.021),"rgba(11,16,26,.86)");
-   roundRect(bx,by,Math.max(5,w*.006),bandH,4,"#e2b56a");
-   const logoS=v?66:72,logoX=bx+(v?45:68),logoY=by+bandH/2;
-   if(logo.complete&&logo.naturalWidth)ctx.drawImage(logo,logoX-logoS*.45,logoY-logoS*.45,logoS*.9,logoS*.9);
-   const tx=logoX+logoS*.78;
-   text(fields.title.value.trim()||"Culto da Família",tx,by+bandH*.36,v?29:40,"#fff0d6",800,"left",bandW-(tx-bx)-22);
-   text(fields.address.value.replace(/[\r\n]+/g," ").trim(),tx,by+bandH*.73,v?16:19,"#c8bcab",600,"left",bandW-(tx-bx)-17);
-   text(church,w*.04,h*.06,v?15:18,"#ffffff",800,"left",w*.73);
- }
+    const w=canvas.width,h=canvas.height,v=format==="vertical";
+    const shared=activeSource==="screen";
+    const source=shared?displayVid:vid;
+    if(source.readyState>=2&&source.videoWidth){
+      const sw=source.videoWidth,sh=source.videoHeight;
+      if(shared){
+        background(t,"pause");
+        const scale=Math.min(w/sw,h/sh);
+        const dw=sw*scale,dh=sh*scale;
+        ctx.drawImage(source,(w-dw)/2,(h-dh)/2,dw,dh);
+      }else{
+        const scale=Math.max(w/sw,h/sh),cw=w/scale,ch=h/scale;
+        ctx.drawImage(source,(sw-cw)/2,(sh-ch)/2,cw,ch,0,0,w,h);
+      }
+    }else{
+      background(t,"pause");
+      text(shared?"Aguardando a tela compartilhada…":"Preparando a imagem da câmera…",w/2,h/2,v?23:28,"#d9c194",600,"center",w*.91);
+    }
+    const grad=ctx.createLinearGradient(0,h*.62,0,h);
+    grad.addColorStop(0,"rgba(10,15,24,0)");grad.addColorStop(1,"rgba(5,10,17,.77)");
+    ctx.fillStyle=grad;ctx.fillRect(0,h*.65,w,h*.35);
+    roundRect(w-(v?205:214)-23,23,v?205:214,39,12,"#772932ee");
+    text(shared?"● TELA COMPARTILHADA":"● EM PRODUÇÃO",w-(v?205:214)/2-23,42,v?14:16,"#fff7f2",800);
+    text(church,w*.04,h*.05,v?16:19,"#fff7ed",800,"left",w*.69);
+    drawLowerThird(performance.now());
+  }
  function drawPause(t){
    const w=canvas.width,h=canvas.height,v=format==="vertical";
    background(t,"pause");topMark();
@@ -478,7 +859,7 @@
    else if(phase==="paused")drawPause(t);
    else if(phase==="outro")drawOutro(t);
    else drawDone(t);
-   if((phase==="live"||phase==="waiting")&&cardState.active)drawInformationCard(now);
+    // A mensagem substitui a identificação do culto dentro de drawCamera().
    // Short crossfade at every scene change, avoid abrupt cut. Program output remains full-frame.
    const elapsed=timeSince(),fade=Math.max(0,1-elapsed/.65);
    if(fade>0){
@@ -543,5 +924,6 @@
  window.addEventListener("beforeunload",()=>{
    musicOff();
    if(cameraStream)cameraStream.getTracks().forEach(t=>t.stop());
+   if(displayStream)displayStream.getTracks().forEach(t=>t.stop());
  });
 })();

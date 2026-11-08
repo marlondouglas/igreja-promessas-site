@@ -20,7 +20,7 @@
   }catch{return null;}
  }
  function auth(){
-   const pw=pass.value;
+   const pw=pass.value.trim();
    if(!pw||pw.length<20)throw new Error("Informe a senha privada de publicação no campo acima.");
    // publish password never stored in site, query string or browser localStorage.
    return "Basic "+btoa("promessas:"+pw);
@@ -37,7 +37,17 @@
  }
  $("test-server").addEventListener("click",probe);
  on.addEventListener("change",()=>{
-  report(on.checked?"Envio habilitado. Preencha a senha e inicie a apresentação para conectar depois dos 10 segundos.":"Ensaio local. Nenhum vídeo será enviado ao servidor.");
+  if(!on.checked){stop();return;}
+  const scene=$("scene-status")?.textContent||"";
+  if(/ABERTURA|CÂMERA|PAUSA/i.test(scene)){start();return;}
+  report("Envio habilitado. Preencha a senha e inicie a apresentação para conectar depois dos 10 segundos.");
+ });
+ $("reconnect-publish").addEventListener("click",async()=>{
+  if(!on.checked){report("Primeiro marque 'Enviar o vídeo composto ao servidor do notebook'.");return;}
+  if(attempting){report("Conexão em andamento. Aguarde alguns segundos.");return;}
+  try{auth();}catch(e){report(e.message);return;}
+  await stop();
+  await start();
  });
  document.addEventListener("click",ev=>{
   if(ev.target?.id==="start"&&on.checked){
@@ -47,7 +57,7 @@
    }catch(e){ev.preventDefault();ev.stopImmediatePropagation();report(e.message);}
   }
  },true);
- async function gather(pc,timeout=8500){
+ async function gather(pc,timeout=15000){
   if(pc.iceGatheringState==="complete")return;
   await new Promise((resolve,reject)=>{
    const tm=setTimeout(()=>{pc.removeEventListener("icegatheringstatechange",cb);reject(new Error("ICE demorou além do esperado"));},timeout);
@@ -76,6 +86,18 @@
    const pc=new RTCPeerConnection({iceServers:[]});
    peer=pc;
    for(const t of tracks)pc.addTrack(t,stream);
+   // On modest CPUs, a bounded H.264 bitrate gives consistent 720p without encoder spikes.
+   // The MediaMTX fMP4 viewer will buffer three 2-second segments before playback.
+   const vsender=pc.getSenders().find(s=>s.track?.kind==="video");
+   if(vsender){
+     try{
+       const params=vsender.getParameters();
+       if(!params.encodings?.length)params.encodings=[{}];
+       params.encodings[0].maxBitrate=2400000;
+       params.encodings[0].maxFramerate=24;
+       await vsender.setParameters(params);
+     }catch(_){/* Browser chooses safe defaults if sender parameters are unsupported. */}
+   }
    // HLS viewers need H264; browser default VP8 cannot be repackaged into HLS by MediaMTX.
    const vcaps=RTCRtpSender.getCapabilities?.("video")?.codecs||[];
    const h264=vcaps.filter(c=>c.mimeType?.toLowerCase()==="video/h264");
@@ -85,7 +107,7 @@
     if(pc!==peer)return;
     if(pc.connectionState==="connected"){
       connection=true;badge("NO AR · SERVIDOR LOCAL");
-      report("✓ Vídeo e áudio chegando ao servidor do notebook. O acesso externo ainda não está liberado.");
+      report("✓ Sinal recebido pelo notebook. O site público está conectado por HTTPS. Confira imagem e áudio no celular.");
     } else if(["failed","disconnected"].includes(pc.connectionState)){
       badge("CONEXÃO INTERROMPIDA");
       report("Falha de conexão com MediaMTX. Verifique o notebook. A saída local continua disponível.");
@@ -109,7 +131,19 @@
     if(!connection&&peer===pc){badge("SEM RECEPÇÃO");report("WHIP aceito, mas os pacotes de vídeo não chegaram. Verifique a rede e o firewall.");}
    },12000);
   }catch(error){
-   badge("FALHA NO ENVIO");report("Falha ao publicar: "+(error?.message||"erro desconhecido"));
+   const detail=String(error?.message||"erro desconhecido");
+   const guidance=/HTTP 401|senha de publicação incorreta/i.test(detail)
+     ?"Confira a senha privada: copie somente os caracteres após 'Senha de publicação:', sem o título."
+     :/HTTP 409|already publishing|already in use|publisher already/i.test(detail)
+     ?"Outra sessão já está enviando ao mesmo canal. Encerre a sessão anterior e tente novamente."
+     :/Failed to fetch|NetworkError|Load failed|fetch failed/i.test(detail)
+     ?"Verifique a extensão de bloqueio do Chrome e a conexão com http://127.0.0.1:8889/culto. Não altere o endereço WHIP."
+     :/ICE|timeout|tempo/i.test(detail)
+     ?"O navegador demorou para conectar. Verifique câmera, microfone e consumo do notebook."
+     :"Leia a mensagem completa abaixo e informe apenas o código do erro, nunca a senha.";
+   badge(/HTTP 401|senha de publicação incorreta/i.test(detail)?"SENHA INVÁLIDA":"FALHA NO ENVIO");
+   report("Falha ao publicar: "+detail+" "+guidance);
+   $("publish-status").scrollIntoView({behavior:"smooth",block:"center"});
    if(peer){peer.close();peer=null;}
    if(keepVideo){keepVideo.stop();keepVideo=null;}
   }finally{attempting=false;}
