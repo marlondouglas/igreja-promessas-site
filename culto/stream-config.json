@@ -1,6 +1,6 @@
 {
-  "enabled": false,
+  "enabled": true,
   "format": "horizontal",
-  "hlsPageUrl": null,
-  "note": "Habilitar somente após verificar HTTPS e recepção externa do notebook"
+  "hlsPageUrl": "https://marlon-tiffany.tail7759a9.ts.net/culto",
+  "note": "Sinal HLS da igreja via Tailscale Funnel HTTPS. Sem transmissão, o site mostra espera; a publicação WHIP permanece restrita ao notebook."
 }
