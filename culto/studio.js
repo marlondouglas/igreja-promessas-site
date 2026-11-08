@@ -233,7 +233,7 @@
      b.classList.toggle("selected",yes);
      b.setAttribute("aria-pressed",String(yes));
    }
-   $("viewer-layout").value="auto";
+   // A orientação da apresentação é definida pelo estúdio.
    saveSettings();
  }
  for(const b of document.querySelectorAll(".format-option"))b.addEventListener("click",()=>setFormat(b.dataset.format));

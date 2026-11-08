@@ -1,0 +1,6 @@
+{
+  "enabled": false,
+  "format": "horizontal",
+  "hlsPageUrl": null,
+  "note": "Habilitar somente após verificar HTTPS e recepção externa do notebook"
+}
