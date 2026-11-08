@@ -10,7 +10,7 @@
 <meta property="og:description" content="Um lugar para crescer na fé com alegria: desenhos, histórias e atividades bíblicas.">
 <link rel="canonical" href="https://igrejapromessas.site/kids/">
 <link rel="icon" href="/logo-promessas.svg" type="image/svg+xml">
-<link rel="stylesheet" href="estilo.css?v=kids20261108b">
+<link rel="stylesheet" href="estilo.css?v=kids20261108h">
 <title>Promessas Kids | Igreja Ministério Promessas</title>
 </head>
 <body>
@@ -24,8 +24,8 @@
     <span class="brand-text"><strong>IGREJA <span>PROMESSAS</span></strong><small>Ministério Promessas</small></span>
    </a>
    <nav class="nav" aria-label="Navegação da área infantil">
-    <a href="#cineminha" class="nav-link">Cineminha</a>
-    <a href="#brincar" class="nav-link">Brincar</a>
+    <a href="#cineminha" class="nav-link">Desenhos</a>
+    <a href="#jogos" class="nav-link">Jogos</a>
     <a href="#versiculo" class="nav-link">Versículo</a>
     <a href="/" class="back">← Voltar à igreja</a>
    </nav>
@@ -40,7 +40,7 @@
    <p class="hero-desc">Um lugar para aprender sobre Jesus, descobrir histórias de fé e se divertir com alegria.</p>
    <div class="hero-actions">
     <a class="button button-main" href="#cineminha"><span class="btn-icon">▶</span> Assistir aos vídeos <span aria-hidden="true">↗</span></a>
-    <a class="button button-outline" href="#brincar">🎨 Hora de brincar</a>
+    <a class="button button-outline" href="#jogos">🎨 Hora de brincar</a>
    </div>
    <div class="safe-note"><span aria-hidden="true">♥</span> Feito com carinho para a família</div>
   </div>
@@ -76,28 +76,38 @@
         <div class="cover-center">
          <span class="screen-icon" aria-hidden="true">🎞️</span>
          <span class="cover-tag">SESSÃO PROMESSAS KIDS</span>
-         <h3>Marcelino<br><em>Pão e Vinho</em></h3>
-         <p>Uma playlist especial para acompanhar com a família.</p>
-         <button class="play-video" id="load-player" type="button" aria-label="Carregar playlist Marcelino Pão e Vinho no YouTube"><span class="play-triangle">▶</span> Assistir agora</button>
+         <h3 id="cover-title">A Arca de Noé<br><em>Canal da Sarah</em></h3>
+         <p id="cover-summary">Uma historinha bíblica para assistir com a família.</p>
+         <button class="play-video" id="load-player" type="button" aria-label="Carregar desenho bíblico do canal oficial no YouTube"><span class="play-triangle">▶</span> Assistir agora</button>
         </div>
        </div>
        <div class="video-frame" id="video-frame" hidden></div>
       </div>
-      <div class="video-controls"><span class="video-badge"><span class="badge-dot"></span> PLAYLIST DO YOUTUBE</span><a class="external-watch" href="https://www.youtube.com/playlist?list=PLRfwXwAZ_xLe2WVZqMYuFuvZjCmkWtWFu" target="_blank" rel="noopener noreferrer">Abrir no YouTube <span aria-hidden="true">↗</span></a></div>
+      <div class="video-controls"><span class="video-badge"><span class="badge-dot"></span> VÍDEO DO CANAL OFICIAL NO YOUTUBE</span><a class="external-watch" id="external-watch" href="https://www.youtube.com/watch?v=5rEPzpDkVOY" target="_blank" rel="noopener noreferrer">Abrir no YouTube <span aria-hidden="true">↗</span></a></div>
     </div>
-    <aside class="featured-side" aria-label="Sobre a playlist">
+    <aside class="featured-side" aria-label="Sobre as histórias bíblicas">
       <span class="side-illustration" aria-hidden="true">🌈</span>
-      <p class="side-kicker">NOSSA PRIMEIRA PLAYLIST</p>
-      <h3>Uma história para o <em>coração.</em></h3>
-      <p>Descubra a playlist <strong>Marcelino Pão e Vinho</strong>, escolhida para o espaço infantil da Igreja Promessas.</p>
+      <p class="side-kicker" id="featured-channel">CANAL DA SARAH • 3 PALAVRINHAS</p>
+      <h3 id="featured-title">A Arca de <em>Noé.</em></h3>
+      <p id="featured-summary">Acompanhe a historinha de Noé contada para crianças pelo Canal da Sarah, do projeto 3 Palavrinhas.</p>
       <div class="side-box"><span aria-hidden="true">💡</span><span>Converse com as crianças sobre amor, bondade e generosidade depois de assistir.</span></div>
-      <p class="parent-note">Os vídeos são disponibilizados pelo YouTube. A disponibilidade e o conteúdo podem mudar; um responsável deve acompanhar a sessão.</p>
+      <p class="parent-note">Os vídeos são incorporados de seus respectivos canais oficiais no YouTube. A disponibilidade pode mudar; um responsável deve acompanhar a sessão.</p>
     </aside>
+   </div>
+   <div class="cartoon-library" aria-labelledby="cartoon-title">
+     <div class="cartoon-library-head"><div><span class="overline">ESCOLHA SUA HISTÓRIA</span><h3 id="cartoon-title">Desenhos para <em>descobrir</em></h3><p>Canais cristãos oficiais, em português. Escolha o episódio e assista acima.</p></div><span aria-hidden="true">🎥</span></div>
+     <div class="video-filters" id="video-filters" role="group" aria-label="Filtrar desenhos">
+      <button type="button" data-category="todos" class="video-filter active" aria-pressed="true">Todos</button>
+      <button type="button" data-category="biblia" class="video-filter" aria-pressed="false">📖 Histórias bíblicas</button>
+      <button type="button" data-category="valores" class="video-filter" aria-pressed="false">💚 Valores cristãos</button>
+     </div>
+     <div class="cartoon-grid" id="cartoon-grid" aria-live="polite"></div>
+     <p class="cartoon-copyright">Capas exibidas diretamente do YouTube. Os vídeos pertencem a seus criadores e são reproduzidos no player oficial, sem copiar ou hospedar os arquivos.</p>
    </div>
   </div>
  </section>
  <section class="activities container" id="brincar" aria-labelledby="activities-title">
-  <div class="section-heading"><div><span class="overline coral">APRENDER É UMA AVENTURA</span><h2 id="activities-title">Hora de <em>brincar!</em></h2><p>Um pequeno desafio bíblico para aprender com alegria.</p></div><span class="section-emoji" aria-hidden="true">🎨</span></div>
+  <div class="section-heading"><div><span class="overline coral">APRENDER É UMA AVENTURA</span><h2 id="activities-title">Hora de <em>brincar!</em></h2><p>Quiz bíblico, missão do bem e novos jogos feitos especialmente para nossa turminha.</p></div><span class="section-emoji" aria-hidden="true">🎨</span></div>
   <div class="activities-grid">
    <article class="quiz-card" aria-labelledby="quiz-title">
     <div class="quiz-header"><span class="quiz-symbol" aria-hidden="true">🧩</span><div><span class="card-eyebrow">DESAFIO BÍBLICO</span><h3 id="quiz-title">Quiz da Alegria</h3></div><span id="quiz-progress" class="progress-pill">1 de 4</span></div>
@@ -114,16 +124,60 @@
    </article>
   </div>
  </section>
+ <section class="playzone container" id="jogos" aria-labelledby="playzone-title">
+   <div class="section-heading"><div><span class="overline">NOVOS JOGOS DO PROMESSAS KIDS</span><h2 id="playzone-title">Nosso <em>parquinho bíblico</em> ✨</h2><p>Três novas atividades criadas para jogar no celular, no tablet ou no computador.</p></div><span class="section-emoji" aria-hidden="true">🕹️</span></div>
+   <div class="game-picker" role="group" aria-label="Escolher jogo">
+     <button class="game-tab active" data-game="memoria" type="button" aria-pressed="true"><span>🧠</span> Jogo da memória<small>Encontre os pares</small></button>
+     <button class="game-tab" data-game="pintar" type="button" aria-pressed="false"><span>🎨</span> Pintar e colorir<small>Crie sua arte</small></button>
+     <button class="game-tab" data-game="palavras" type="button" aria-pressed="false"><span>📖</span> Organize o versículo<small>Palavra por palavra</small></button>
+   </div>
+   <div class="game-stage">
+    <article class="game-panel active" id="game-memoria" aria-labelledby="memory-title">
+     <div class="game-head"><div><span class="card-eyebrow">DESAFIO DA MEMÓRIA</span><h3 id="memory-title">Encontre os pares!</h3><p>Vire duas cartas de cada vez para descobrir símbolos das histórias bíblicas.</p></div><div class="game-score" id="memory-score">0 de 6 pares</div></div>
+     <div id="memory-grid" class="memory-grid" aria-label="Doze cartas do jogo de memória"></div>
+     <div class="game-footer"><p id="memory-feedback" role="status" aria-live="polite">Escolha duas cartas para começar. 💜</p><button id="memory-restart" class="game-restart" type="button">↻ Embaralhar</button></div>
+    </article>
+    <article class="game-panel" id="game-pintar" aria-labelledby="paint-title" hidden>
+     <div class="game-head"><div><span class="card-eyebrow">ARTE PARA PEQUENOS ARTISTAS</span><h3 id="paint-title">Pinte a Arca de Noé!</h3><p>Escolha uma cor e toque nas partes do desenho. Uma ilustração original do Promessas Kids.</p></div><div class="game-score">🖍️ Criar</div></div>
+     <div class="paint-space">
+      <svg id="paint-art" class="paint-art" viewBox="0 0 520 310" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Desenho para colorir: sol, arco-íris, arca de Noé e ondas">
+       <rect x="2" y="2" width="516" height="306" rx="24" fill="#f6faff"/>
+       <g stroke="#615478" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <path data-paint="1" d="M100 159A158 158 0 0 1 416 159" fill="#ffe4dc" stroke="#e88ca1" stroke-width="11"/>
+        <path data-paint="1" d="M130 160A128 128 0 0 1 386 160" fill="#ffe5aa" stroke="#f4ba6b" stroke-width="11"/>
+        <path data-paint="1" d="M160 161A98 98 0 0 1 356 161" fill="#d9e5ff" stroke="#a28bd2" stroke-width="11"/>
+        <circle data-paint="1" cx="424" cy="67" r="33" fill="#ffda81"/>
+        <path data-paint="1" d="M92 250L155 287H370L433 250Z" fill="#cfa78a"/>
+        <rect data-paint="1" x="142" y="186" width="242" height="70" rx="14" fill="#f3cda7"/>
+        <path data-paint="1" d="M131 187L263 116 395 187Z" fill="#e4a7a1"/>
+        <rect data-paint="1" x="247" y="203" width="44" height="53" rx="9" fill="#c3a1d9"/>
+        <path data-paint="1" d="M162 206h42v32h-42z" fill="#e1e7f1"/>
+        <path data-paint="1" d="M324 206h42v32h-42z" fill="#e1e7f1"/>
+       </g>
+       <path data-paint="1" d="M10 283Q50 266 90 283T170 283T250 283T330 283T410 283T510 283L510 309H10Z" fill="#b0e6f0" stroke="#5ab7ce" stroke-width="4"/>
+       <g fill="#fff" stroke="#7c7a91" stroke-width="3"><path data-paint="1" d="M40 90a20 20 0 0 1 30-19 24 24 0 0 1 46 3 18 18 0 0 1 19 29H41a15 15 0 0 1-1-13Z"/><path data-paint="1" d="M379 109a20 20 0 0 1 28-18 21 21 0 0 1 43 6 15 15 0 0 1 17 22h-89Z"/></g>
+       <text x="260" y="300" text-anchor="middle" font-size="11" font-weight="900" fill="#485c79">PROMESSAS KIDS • ARCA DE NOÉ</text>
+      </svg>
+      <div class="paint-controls"><span class="paint-label">Minhas cores:</span><div class="paint-palette" id="paint-palette" role="group" aria-label="Escolher cor"></div><p class="paint-tip" id="paint-feedback" role="status">Escolha uma cor e toque numa área do desenho.</p><div class="paint-buttons"><button id="paint-reset" type="button" class="game-restart">↻ Recomeçar</button><button id="paint-download" type="button" class="game-primary">↓ Salvar meu desenho</button></div></div>
+     </div>
+    </article>
+    <article class="game-panel" id="game-palavras" aria-labelledby="words-title" hidden>
+     <div class="game-head"><div><span class="card-eyebrow">MONTE A MENSAGEM</span><h3 id="words-title">Organize o versículo!</h3><p>Toque nas palavras na ordem certa para descobrir a mensagem bíblica.</p></div><div class="game-score" id="words-progress">Desafio 1 de 3</div></div>
+     <div class="words-card"><span class="words-reference" id="words-reference">1 João 4:8</span><p class="words-instruction">Monte a frase:</p><div id="words-answer" class="words-answer" aria-live="polite">Toque nas palavras abaixo ↓</div><div id="words-bank" class="words-bank"></div><p id="words-feedback" class="words-feedback" role="status"></p><div class="paint-buttons"><button id="words-reset" type="button" class="game-restart">↻ Recomeçar</button><button id="words-check" type="button" class="game-primary">Conferir resposta ✦</button><button id="words-next" type="button" class="game-primary" hidden>Próxima frase →</button></div></div>
+    </article>
+   </div>
+  </section>
  <section class="verse container" id="versiculo" aria-labelledby="verse-title">
    <div class="verse-icon" aria-hidden="true">📖</div>
    <div><span class="overline">VERSÍCULO PARA GUARDAR NO CORAÇÃO</span><h2 id="verse-title">Jesus ama as <em>crianças!</em></h2><p class="verse-quote">“Deixem vir a mim as crianças.”</p><p class="verse-ref">Marcos 10:14 · Trecho bíblico</p></div>
    <div class="verse-decoration" aria-hidden="true">✦</div>
  </section>
  <section class="parent-section container">
-  <div><span class="overline">PARA QUEM CUIDA COM AMOR</span><h2>Uma palavra aos <em>responsáveis</em></h2><p>A Área Kids é um espaço de aprendizado cristão. Para uma experiência positiva, assista junto com a criança, confira os vídeos da playlist e acompanhe os links externos. Não solicitamos nome, foto, localização nem dados das crianças.</p></div>
+  <div><span class="overline">PARA QUEM CUIDA COM AMOR</span><h2>Uma palavra aos <em>responsáveis</em></h2><p>A Área Kids é um espaço de aprendizado cristão. Para uma experiência positiva, assista junto com a criança, confira o conteúdo do vídeo e acompanhe os links externos. Não solicitamos nome, foto, localização nem dados das crianças.</p></div>
   <div class="parent-seal" aria-hidden="true">🫶<small>AMOR E CUIDADO</small></div>
  </section>
 </main>
 <footer><div class="container footer-inner"><div><img src="/logo-promessas.svg" alt=""><span><strong>Igreja Ministério Promessas</strong><small>Uma igreja que acolhe toda a família.</small></span></div><a href="/">Voltar para a Igreja Promessas →</a></div><p class="yt-note">Vídeos reproduzidos pelo player oficial do YouTube. Reprodução sujeita à disponibilidade e às políticas da plataforma.</p></footer>
-<script src="kids.js?v=kids20261108b" defer></script>
+<script src="kids.js?v=kids20261108h" defer></script>
+<script src="atividades.js?v=kids20261108h" defer></script>
 </body></html>

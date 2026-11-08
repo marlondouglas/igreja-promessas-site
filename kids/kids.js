@@ -1,7 +1,7 @@
 "use strict";
 /* Área Kids Promessas — no data collection, no analytics, no storage, official YouTube embed only on click. */
 (() => {
-  const PLAYLIST_ID="PLRfwXwAZ_xLe2WVZqMYuFuvZjCmkWtWFu";
+  const FEATURED_VIDEO_ID="5rEPzpDkVOY";
   const playerButton=document.getElementById("load-player");
   const videoFrame=document.getElementById("video-frame");
   const videoCover=document.getElementById("player-cover");
@@ -9,8 +9,8 @@
     if(videoFrame.querySelector("iframe"))return;
     // Privacy-enhanced official YouTube player: no autoplay, initiated by an actual viewer click.
     const iframe=document.createElement("iframe");
-    iframe.title="Playlist Marcelino Pão e Vinho — YouTube";
-    iframe.src="https://www.youtube-nocookie.com/embed/videoseries?list="+PLAYLIST_ID+"&playsinline=1&rel=0";
+    iframe.title=(window.PromessasKidsVideoTitle||"História Bíblica")+" — vídeo oficial do YouTube";
+    iframe.src="https://www.youtube-nocookie.com/embed/"+(window.PromessasKidsVideoId||FEATURED_VIDEO_ID)+"?playsinline=1&rel=0";
     iframe.allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share";
     iframe.referrerPolicy="strict-origin-when-cross-origin";
     iframe.allowFullscreen=true;

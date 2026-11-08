@@ -21,3 +21,106 @@ html,body{width:100%;max-width:100%;overflow-x:clip}
 .footer-inner img{background:#7650b5;padding:4px;border-radius:12px}
 
 .ambient-sun{right:0}
+
+/* PROMESSAS KIDS · mundo encantado — identidade visual 2026-11-08
+   Gradientes e ilustrações CSS originais, sem dependências externas de imagem. */
+:root{--cream:#eaf2ff;--surface:#fffaf2;--shadow:0 17px 42px #6b4bbb22}
+html{background:#e8e2ff}
+body{
+ background:
+  radial-gradient(ellipse 570px 480px at 5% 14%,#ffe3a5ee 0%,#ffe3a500 74%),
+  radial-gradient(ellipse 580px 450px at 94% 15%,#f8bae0d9 0%,#f8bae000 80%),
+  radial-gradient(ellipse 720px 620px at 8% 47%,#bfeff2d9 0%,#bfeff200 70%),
+  radial-gradient(ellipse 580px 520px at 94% 70%,#ffe6afbf 0%,#ffe6af00 76%),
+  linear-gradient(155deg,#e6e1ff 1%,#dbf5fb 34%,#e7ddff 63%,#ffe8db 100%);
+ color:#30264e;background-attachment:fixed;
+}
+.topbar{background:#fff7f3d9;box-shadow:0 5px 26px #8167ab12}
+.hero{position:relative;isolation:isolate}
+.hero:before{content:"";position:absolute;inset:8px -4% 18px -4%;z-index:-1;pointer-events:none;border-radius:40px;
+ background:
+ radial-gradient(circle at 17% 18%,#fff9de9e 0 7px,transparent 8px),
+ radial-gradient(circle at 74% 15%,#ffffff8f 0 10px,transparent 11px),
+ radial-gradient(circle at 8% 86%,#d3b1f4ac 0 10px,transparent 11px),
+ radial-gradient(circle at 90% 81%,#fbb4bbad 0 10px,transparent 11px);
+ background-size:360px 360px;
+}
+.hero-logo h1{text-shadow:0 9px 0 #c8b0f6,0 22px 20px #8654c92b}
+.hero-scene{box-shadow:0 22px 68px #675acc40,0 0 0 10px #ffffff52}
+.safe-note{color:#674e87}
+.stats-ribbon{background:linear-gradient(115deg,#fff0cfe8 0%,#f9e7ffe8 54%,#e3fff6e8 100%);border:2px solid #ffffffd4;box-shadow:0 19px 35px #9e71be24}
+.cinema-section{position:relative;isolation:isolate;background:
+  radial-gradient(circle at 8% 11%,#ffcfe8 0%,transparent 35%),
+  radial-gradient(circle at 96% 70%,#ccecfb 0%,transparent 41%),
+  linear-gradient(160deg,#dfd2ff,#e9dffc 46%,#ceeefa);
+ border:1px solid #ffffff8c;box-shadow:0 -10px 45px #8366b51a;overflow:hidden}
+.cinema-section:before,.cinema-section:after{position:absolute;content:"";pointer-events:none;border-radius:50%;z-index:-1}
+.cinema-section:before{width:390px;height:390px;right:-220px;top:28%;background:#f2b6eb60;box-shadow:0 0 0 48px #fff6fb20}
+.cinema-section:after{width:260px;height:260px;left:-180px;bottom:5%;background:#abeed65c;box-shadow:0 0 0 54px #ffffff2f}
+.featured-side,.quiz-card{background:linear-gradient(150deg,#ffffff,#fff9ff 77%,#f7eeff)}
+.activities{position:relative}
+.activities:before{content:"";position:absolute;inset:28px -2vw;pointer-events:none;border-radius:45px;z-index:-1;background:radial-gradient(ellipse at 82% 25%,#f7c5e66b,transparent 38%),radial-gradient(ellipse at 12% 85%,#b7ebda9c,transparent 48%)}
+.kindness-card{box-shadow:0 15px 38px #be85632d}
+.verse{background:linear-gradient(125deg,#d4c1ff,#c8eeff 51%,#ffded5);box-shadow:0 17px 38px #9877c033;border:2px solid #fff7}
+.parent-section{padding-inline:clamp(14px,2vw,25px);background:#ffffff4a;border-radius:27px;margin-top:45px;margin-bottom:45px;box-shadow:0 12px 38px #b2a0c01a}
+footer{background:linear-gradient(125deg,#f5eaff,#fff0df);border-top:2px solid #ffffffa5}
+.cartoon-library{margin-top:34px}
+.cartoon-library-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:17px}
+.cartoon-library-head h3{font-size:clamp(24px,3.1vw,37px);margin:6px 0;line-height:1.2;font-weight:1000}
+.cartoon-library-head h3 em{color:#8656c7;font-style:normal}
+.cartoon-library-head p{font-size:13px;color:#716781;margin:0}
+.cartoon-library-head>span{font-size:41px}
+.video-filters{display:flex;gap:8px;flex-wrap:wrap;margin:17px 0}
+.video-filter{border:1px solid #b7a3d9;border-radius:24px;padding:8px 15px;background:#fff9ff;color:#7154a4;font-size:12px;font-weight:900}
+.video-filter:hover{background:#ede0ff}.video-filter.active{color:#fff;background:#7551b7;border-color:#7551b7}
+.cartoon-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:17px}
+.cartoon-card{background:linear-gradient(160deg,#ffffff,#fff7ee);box-shadow:0 12px 25px #6b529d1a;border:2px solid #ffffff;border-radius:19px;padding:9px;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.cartoon-thumb{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;background:#d1c2ed;display:block}
+.cartoon-card-copy{padding:12px 9px;flex:1;display:flex;flex-direction:column}
+.cartoon-card small{font-size:10px;color:#8a5fb5;font-weight:900;letter-spacing:.04em}
+.cartoon-card h4{font-size:15px;font-weight:1000;line-height:1.3;margin:7px 0;color:#383154}
+.cartoon-card p{font-size:11px;color:#716d80;margin:0 0 12px}
+.cartoon-pick{border:0;padding:10px 12px;border-radius:10px;background:#f4a05f;color:#482944;font-weight:1000;margin-top:auto}
+.cartoon-pick:hover{background:#ef8f49}.cartoon-card.current{border-color:#9367db}
+.cartoon-copyright{font-size:10px;color:#6d627e}
+.playzone{padding-bottom:90px}
+.game-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:19px}
+.game-tab{border:2px solid #fffdf9;border-radius:17px;padding:15px 10px;background:linear-gradient(145deg,#fff8e7,#f7eaff);font-size:14px;font-weight:1000;box-shadow:0 9px 25px #7b64b61a;color:#5c477c;display:flex;flex-direction:column;align-items:center;gap:2px}
+.game-tab span{font-size:27px}.game-tab small{font-size:10px;color:#8c7a9a}.game-tab.active{border-color:#8c5ccc;background:linear-gradient(120deg,#dbccff,#fce0f2);color:#3f2b73}
+.game-panel{background:linear-gradient(155deg,#fffdfa,#f9f3ff);border:2px solid #fff;border-radius:26px;box-shadow:0 17px 39px #896fb226;padding:24px}
+.game-panel[hidden]{display:none!important}
+.game-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:18px}
+.game-head h3{font-size:26px;margin:4px 0 2px;font-weight:1000;color:#463173}
+.game-head p{font-size:12px;color:#736b81;margin:0}
+.game-score{background:#efe4ff;color:#6948a6;font-size:12px;font-weight:1000;padding:8px 12px;border-radius:24px;white-space:nowrap}
+.memory-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;max-width:800px;margin:12px auto}
+.memory-card{border:3px solid #fff;border-radius:16px;min-height:95px;background:linear-gradient(145deg,#906ce0,#5c3cac);box-shadow:0 7px 14px #614da02a;display:grid;place-items:center;font-size:33px;transition:transform .17s,background .17s;cursor:pointer}
+.memory-card:not(:disabled):hover{transform:translateY(-3px)}
+.memory-card.revealed,.memory-card.matched{background:#fff1c8;border-color:#ead69d}
+.memory-card.matched{background:#d2f4da;cursor:default}
+.memory-card:disabled{opacity:1}
+.game-footer{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:16px}
+.game-footer p{color:#7b6a91;margin:0;font-size:12px;font-weight:900}
+.game-restart,.game-primary{border-radius:12px;border:0;padding:11px 16px;font-size:12px;font-weight:1000}
+.game-restart{background:#f0e3ff;color:#6745a2}.game-primary{background:#7650bc;color:white}
+.paint-space{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(220px,.75fr);gap:20px;align-items:center}
+.paint-art{width:100%;height:auto;background:white;border:2px solid #e2d7f1;border-radius:15px;touch-action:manipulation}
+.paint-art [data-paint]{cursor:pointer}
+.paint-controls{padding:12px}.paint-label{display:block;font-size:12px;font-weight:1000;color:#62498b;margin-bottom:10px}
+.paint-palette{display:grid;grid-template-columns:repeat(5,36px);gap:9px}
+.paint-color{width:36px;height:36px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px #aa9cb8;cursor:pointer}
+.paint-color.active{box-shadow:0 0 0 3px #7c56bc}
+.paint-tip{font-size:11px;color:#797188}
+.paint-buttons{display:flex;flex-wrap:wrap;gap:10px}
+.words-card{background:#f4ecff;border:2px solid #ead5ff;border-radius:20px;padding:23px}
+.words-reference{font-size:11px;font-weight:900;color:#7856a8}
+.words-instruction{font-size:14px;font-weight:800}
+.words-answer{min-height:75px;background:#fff;border:2px dashed #b69ade;padding:13px;display:flex;flex-wrap:wrap;gap:7px;align-items:center;border-radius:13px;color:#8b7c9f;font-size:12px}
+.words-bank{display:flex;flex-wrap:wrap;gap:9px;margin:18px 0}
+.word-token{border:2px solid #d9c2fa;background:white;border-radius:11px;padding:9px 13px;font-size:14px;font-weight:900;color:#613e9f}
+.word-token.selected{background:#dcc7ff}
+.word-token:disabled{opacity:.42}
+.words-feedback{font-size:13px;font-weight:900;color:#6849a1;min-height:20px}
+@media(max-width:800px){.cartoon-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.paint-space{grid-template-columns:1fr}.memory-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.game-tab{font-size:12px}}
+@media(max-width:540px){body{background:radial-gradient(ellipse at 80% 10%,#f4d6f6,transparent 42%),radial-gradient(ellipse at 20% 35%,#beeef2,transparent 45%),linear-gradient(145deg,#ecdeff,#fce6df 95%);background-attachment:scroll}.cartoon-grid{grid-template-columns:1fr 1fr;gap:9px}.cartoon-card{padding:5px;border-radius:13px}.cartoon-card-copy{padding:8px 4px}.cartoon-card h4{font-size:12px}.cartoon-card p{font-size:10px}.cartoon-pick{font-size:10px}.cartoon-library-head h3{font-size:24px}.playzone{padding-bottom:45px}.game-picker{gap:6px}.game-tab{font-size:10px;padding:9px 4px;border-radius:12px}.game-tab span{font-size:20px}.game-tab small{font-size:8px}.game-panel{padding:15px;border-radius:17px}.game-head{align-items:flex-start}.game-head h3{font-size:21px}.game-score{font-size:9px}.memory-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.memory-card{min-height:68px;font-size:24px;border-radius:11px}.game-footer{flex-direction:column;align-items:flex-start}.words-card{padding:13px}.word-token{font-size:12px;padding:8px}}
+@media(prefers-reduced-motion:reduce){.memory-card{transition:none}}
