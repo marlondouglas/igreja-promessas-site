@@ -934,6 +934,44 @@
    roundRect((w-progressWidth)/2,progressTop,progressWidth,Math.max(5,h*.006),7,"#fff3d244");
    roundRect((w-progressWidth)/2,progressTop,progressWidth*Math.min(1,t/introSeconds),Math.max(5,h*.006),7,"#f1c884");
  }
+ function drawLiveBrand(t){
+   // Rendered into the program canvas, so viewers see this branding as part of the signal.
+   const w=canvas.width,v=format==="vertical";
+   const badgeW=v?123:148,badgeH=40,badgeX=w-badgeW-19,badgeY=24;
+   const cx=v?55:59,cy=53,diameter=v?63:69;
+   const labelX=v?105:111,brandW=v?435:510;
+   ctx.save();
+   roundRect(18,18,brandW,73,15,"rgba(7,13,24,.75)");
+   ctx.strokeStyle="rgba(230,193,128,.30)";
+   ctx.lineWidth=1;
+   ctx.beginPath();ctx.roundRect(18.5,18.5,brandW-1,72,15);ctx.stroke();
+   logoAt(cx,cy,diameter);
+   // Gentle orbiting highlights and glow, preserving the church's original mark.
+   const pulse=.5+.5*Math.sin(t*1.55),orbit=t*.48;
+   ctx.save();
+   ctx.shadowColor="rgba(241,204,141,.75)";
+   ctx.shadowBlur=5+4*pulse;
+   ctx.lineWidth=2.1;ctx.lineCap="round";
+   ctx.strokeStyle="rgba(246,210,147,"+(.52+.34*pulse)+")";
+   ctx.beginPath();ctx.arc(cx,cy,diameter*.62,orbit,orbit+Math.PI*.72);ctx.stroke();
+   ctx.lineWidth=1.25;
+   ctx.strokeStyle="rgba(253,231,177,"+(.29+.3*pulse)+")";
+   ctx.beginPath();ctx.arc(cx,cy,diameter*.67,-orbit*.7,-orbit*.7+Math.PI*.48);ctx.stroke();
+   ctx.restore();
+   if(v){
+     text("IGREJA MINISTÉRIO",labelX,47,17,"#fff2de",800,"left",brandW-(labelX-18)-13);
+     text("PROMESSAS",labelX,70,20,"#f2d49b",800,"left",brandW-(labelX-18)-13);
+   }else{
+     text(church,labelX,56,20,"#fff2de",800,"left",brandW-(labelX-18)-13);
+   }
+   ctx.shadowColor="rgba(0,0,0,.30)";ctx.shadowBlur=9;
+   roundRect(badgeX,badgeY,badgeW,badgeH,12,"rgba(144,31,43,.95)");
+   ctx.shadowBlur=0;
+   ctx.fillStyle="rgba(255,255,255,"+(.80+.20*pulse)+")";
+   ctx.beginPath();ctx.arc(badgeX+23,badgeY+badgeH*.5,5.1,0,Math.PI*2);ctx.fill();
+   text("NO AR",badgeX+(badgeW+18)/2,badgeY+badgeH*.51,v?16:17,"#fff9ee",800,"center",badgeW-45);
+   ctx.restore();
+ }
  function drawCamera(t){
     const w=canvas.width,h=canvas.height,v=format==="vertical";
     const shared=activeSource==="screen";
@@ -956,9 +994,7 @@
     const grad=ctx.createLinearGradient(0,h*.62,0,h);
     grad.addColorStop(0,"rgba(10,15,24,0)");grad.addColorStop(1,"rgba(5,10,17,.77)");
     ctx.fillStyle=grad;ctx.fillRect(0,h*.65,w,h*.35);
-    roundRect(w-(v?205:214)-23,23,v?205:214,39,12,"#772932ee");
-    text(shared?"● TELA COMPARTILHADA":"● EM PRODUÇÃO",w-(v?205:214)/2-23,42,v?14:16,"#fff7f2",800);
-    text(church,w*.04,h*.05,v?16:19,"#fff7ed",800,"left",w*.69);
+    drawLiveBrand(t);
     drawLowerThird(performance.now());
   }
  function drawPause(t){
