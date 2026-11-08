@@ -162,114 +162,166 @@
    if(line&&lines.length<maxLines)lines.push(line);
    return lines;
  }
+
+  // Layout grid: all text is positioned in non-overlapping zones and measured before drawing.
+  function churchWatermark(x,y,size,opacity=.28){
+    if(!logo.complete||!logo.naturalWidth)return;
+    ctx.save();ctx.globalAlpha*=opacity;
+    ctx.drawImage(logo,x,y,size,size);
+    ctx.restore();
+  }
+  function fittedCardLines(value,width,maxHeight,base,minSize,maxLines){
+    let font=base,lines=[];
+    for(;font>=minSize;font-=2){
+      ctx.font="700 "+font+"px "+fonts;
+      lines=cardLines(value,width,maxLines);
+      if(lines.length*font*1.32<=maxHeight)break;
+    }
+    return {font:Math.max(minSize,font),lines};
+  }
+
+
   function drawChurchLowerThird(opacity=1,shift=0){
     const v=format==="vertical",w=canvas.width,h=canvas.height;
-    const bw=w*(v?.92:.88),bx=(w-bw)/2,barH=h*(v?.137:.135),by=h*(v?.965:.958)-barH;
-    ctx.save();ctx.globalAlpha=opacity;ctx.translate(0,shift);
-    ctx.shadowColor="#0008";ctx.shadowBlur=25;ctx.shadowOffsetY=10;
-    roundRect(bx,by,bw,barH,Math.min(23,w*.025),"rgba(13,18,28,.91)");
+    const bw=w*(v?.93:.90),bh=h*(v?.146:.165);
+    const bx=(w-bw)/2,by=h*(v?.968:.964)-bh;
+    const pal=cardThemes.gold,margin=v?20:26,logoSize=bh*(v?.79:.84);
+    const left=bx+logoSize+margin+18,available=bw-(left-bx)-margin;
+    ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,opacity));ctx.translate(0,shift);
+    ctx.shadowColor="#000b";ctx.shadowBlur=21;ctx.shadowOffsetY=6;
+    roundRect(bx,by,bw,bh,19,"rgba(11,19,33,.95)");
     ctx.shadowBlur=0;ctx.shadowOffsetY=0;
-    roundRect(bx,by,Math.max(6,w*.006),barH,4,"#e9bb76");
-    const logoS=v?68:72,logoX=bx+(v?55:66),logoY=by+barH*.50;
-    if(logo.complete&&logo.naturalWidth)ctx.drawImage(logo,logoX-logoS*.45,logoY-logoS*.45,logoS*.9,logoS*.9);
-    const left=logoX+logoS*.73;
-    text(fields.title.value.trim()||"Culto da Família",left,by+barH*.37,v?29:39,"#fff2d9",800,"left",bw-(left-bx)-22);
-    ctx.font="600 "+(v?16:19)+"px "+fonts;
-    text(clampCanvasText(fields.address.value.replace(/[\r\n]+/g," ").trim(),bw-(left-bx)-24),left,by+barH*.76,v?16:19,"#d5c5b4",600,"left",bw-(left-bx)-24);
+    roundRect(bx,by,6,bh,3,pal.line);
+    churchWatermark(bx+17,by+(bh-logoSize)/2,logoSize,.33);
+    text(fields.title.value.trim()||"Culto da Família",left,by+bh*.34,v?31:36,"#fff4e2",800,"left",available);
+    ctx.font="600 "+(v?17:18)+"px "+fonts;
+    const addr=fields.address.value.replace(/[\r\n]+/g," ").trim();
+    text(clampCanvasText(addr,available),left,by+bh*.74,v?17:18,"#cfbdac",600,"left",available);
     ctx.restore();
   }
+
+
   function drawMessageLowerThird(now,opacity=1,shift=0){
-    const c=cardState.config;
-    if(!c)return;
+    const c=cardState.config;if(!c)return;
     const v=format==="vertical",w=canvas.width,h=canvas.height;
-    const bw=w*(v?.92:.88),bx=(w-bw)/2,barH=h*(v?.215:.185),by=h*(v?.965:.958)-barH;
-    const palette=cardThemes[c.style]||cardThemes.gold;
-    const padding=v?26:29,bodySize=v?24:28,titleSize=v?18:19;
+    const pal=cardThemes[c.style]||cardThemes.gold;
     const isPix=c.type==="pix"||c.type==="pix_animation";
-    const contentWidth=bw-padding*2-(isPix?Math.min(150,barH*.96):65);
-    ctx.save();ctx.globalAlpha=opacity;ctx.translate(0,shift);
-    ctx.shadowColor="#000b";ctx.shadowBlur=29;ctx.shadowOffsetY=10;
-    roundRect(bx,by,bw,barH,Math.min(23,w*.025),palette.bg);
-    ctx.shadowBlur=0;ctx.shadowOffsetY=0;
-    roundRect(bx,by,Math.max(6,w*.006),barH,4,palette.line);
-    const left=bx+padding,top=by+padding;
-    ctx.font="700 "+bodySize+"px "+fonts;
+    const bw=w*(v?.93:.91),bh=h*(v?.200:.285);
+    const bx=(w-bw)/2,by=h*(v?.966:.963)-bh;
+    const wmSize=bh*(v?.53:.74);
+    const wmX=bx+(v?9:17),wmY=by+(bh-wmSize)/2;
+    const left=bx+(v?114:181);
+    const qrSize=isPix?Math.min(bh*.68,v?157:152):0;
+    const contentRight=bx+bw-(isPix?qrSize+33:29);
+    const width=Math.max(150,contentRight-left);
     const tutorial=c.type==="pix_animation"?pixTutorialStep(now):null;
-    const lines=cardLines(tutorial?tutorial.detail:c.message,contentWidth,v?3:2);
-    text(tutorial?tutorial.label:(c.heading||"PALAVRA DE DEUS").toUpperCase(),left,top+titleSize*.32,titleSize,palette.title,800,"left",contentWidth-8);
-    if(logo.complete&&logo.naturalWidth){
-      const size=v?42:46;ctx.drawImage(logo,bx+bw-padding-size,top-11,size,size);
+    const heading=tutorial?tutorial.label:(c.heading||"PALAVRA DE DEUS").toUpperCase();
+    const body=tutorial?tutorial.detail:c.message;
+    const headSize=v?18:20,bodySize=v?24:27;
+    const linesLimit=v?3:2;
+    ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,opacity));ctx.translate(0,shift);
+    ctx.shadowColor="rgba(0,0,0,.66)";ctx.shadowBlur=26;ctx.shadowOffsetY=8;
+    roundRect(bx,by,bw,bh,19,pal.bg);
+    ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+    roundRect(bx,by,6,bh,3,pal.line);
+    churchWatermark(wmX,wmY,wmSize,.34);
+    // The header, message, and reference have dedicated vertical bands.
+    text(heading,left,by+bh*(v?.185:.195),headSize,pal.title,800,"left",width);
+    const maxMessageH=bh*(v?.36:.345);
+    const fit=fittedCardLines(body,width,maxMessageH,bodySize,v?19:21,linesLimit);
+    const centerY=by+bh*(v?.525:.535);
+    const rowH=fit.font*1.28;
+    const msgTop=centerY-(fit.lines.length-1)*rowH/2;
+    fit.lines.forEach((line,i)=>text(line,left,msgTop+i*rowH,fit.font,pal.body,700,"left",width));
+    if(c.reference){
+      const ref=String(c.reference).trim();
+      ctx.font="700 "+(v?16:18)+"px "+fonts;
+      text(clampCanvasText(ref,width),left,by+bh*(v?.865:.865),v?16:18,pal.small,700,"left",width);
     }
-    const bodyStart=by+barH*(v?.40:.41),lineSpace=bodySize*1.17;
-    lines.forEach((line,i)=>text(line,left,bodyStart+i*lineSpace,bodySize,palette.body,700,"left",contentWidth));
-    if(c.reference)text(c.reference,left,by+barH*.88,v?15:17,palette.small,800,"left",contentWidth);
-    if(isPix&&pixQR.complete&&pixQR.naturalWidth){
-      const q=Math.min(barH*.76,112),qx=bx+bw-q-15,qy=by+(barH-q)/2;
-      roundRect(qx-5,qy-5,q+10,q+10,8,"#fff");
-      ctx.drawImage(pixQR,qx,qy,q,q);
+    if(isPix){
+      const qx=bx+bw-qrSize-18,qy=by+(bh-qrSize)/2;
+      roundRect(qx-7,qy-7,qrSize+14,qrSize+14,10,"#fff");
+      if(pixQR.complete&&pixQR.naturalWidth)ctx.drawImage(pixQR,qx,qy,qrSize,qrSize);
     }
     ctx.restore();
   }
+
+
   function drawFullMessage(now,opacity=1){
-    const c=cardState.config;
-    if(!c)return;
+    const c=cardState.config;if(!c)return;
     const w=canvas.width,h=canvas.height,v=format==="vertical";
     const pal=cardThemes[c.style]||cardThemes.gold;
-    ctx.save();
-    ctx.globalAlpha=Math.max(0,Math.min(1,opacity));
-    const fill=ctx.createLinearGradient(0,0,w,h);
-    fill.addColorStop(0,c.style==="purple"?"#180e30":c.style==="blue"?"#0a1c31":"#0b1320");
-    fill.addColorStop(1,c.style==="purple"?"#342048":c.style==="blue"?"#132b41":"#302433");
-    ctx.fillStyle=fill;ctx.fillRect(0,0,w,h);
-    const glow=ctx.createRadialGradient(w*.65,h*.36,10,w*.52,h*.46,w*.85);
-    glow.addColorStop(0,c.style==="purple"?"#9470e044":"#e7bf7945");
-    glow.addColorStop(1,"transparent");
-    ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
-    // Gold rings and a restrained spotlight keep the presentation recognizably Promessas.
-    for(let i=0;i<3;i++){
-      ctx.beginPath();ctx.ellipse(w*.52,h*.35,w*(.21+i*.12),h*(.16+i*.09),-.12,0,Math.PI*2);
-      ctx.strokeStyle="rgba(230,191,124,"+(.26-i*.07)+")";ctx.lineWidth=Math.max(1,w*.0018);ctx.stroke();
-    }
-    const border=Math.max(13,w*.018);
-    ctx.strokeStyle=pal.line+"88";ctx.lineWidth=Math.max(2,w*.002);
-    ctx.strokeRect(border,border,w-2*border,h-2*border);
-    if(c.type==="pix"||c.type==="pix_animation"){
-      logoAt(w/2,h*(v?.10:.12),Math.min(w*.17,h*.13));
-      text("IGREJA MINISTÉRIO PROMESSAS",w/2,h*(v?.175:.23),v?22:23,"#f5d6a0",800,"center",w*.90);
-      text("OFERTAS E DÍZIMOS",w/2,h*(v?.245:.32),v?32:43,pal.title,800,"center",w*.90);
-      const isTutorial=c.type==="pix_animation";
-      const step=isTutorial?pixTutorialStep(now):null;
-      text(isTutorial?step.label:"Sua generosidade ajuda a transformar vidas.",w/2,h*(v?.325:.39),v?20:24,pal.body,600,"center",w*.91);
-      const q=Math.min(w*(v?.57:.26),h*(v?.265:.39));
-      const qx=(w-q)/2,qy=h*(v?.38:.43);
-      roundRect(qx-11,qy-11,q+22,q+22,16,"#fff");
-      if(pixQR.complete&&pixQR.naturalWidth)ctx.drawImage(pixQR,qx,qy,q,q);
-      text("PIX: iemp.promessas@gmail.com",w/2,h*(v?.73:.87),v?23:25,"#fff2d5",800,"center",w*.94);
-      text("Recebedor: Igreja Evangélica Ministério Promessas",w/2,h*(v?.80:.925),v?16:17,"#d6c6ad",600,"center",w*.94);
-      text("Confira o nome do recebedor no seu banco antes de confirmar.",w/2,h*(v?.88:.97),v?14:15,"#c8b8a0",500,"center",w*.94);
+    const pix=c.type==="pix"||c.type==="pix_animation";
+    ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,opacity));
+    const grad=ctx.createLinearGradient(0,0,w,h);
+    grad.addColorStop(0,c.style==="purple"?"#171527":"#101725");
+    grad.addColorStop(.65,c.style==="blue"?"#12283c":"#1a2032");
+    grad.addColorStop(1,c.style==="purple"?"#272039":"#171a27");
+    ctx.fillStyle=grad;ctx.fillRect(0,0,w,h);
+    const ambient=ctx.createRadialGradient(w*.73,h*.27,0,w*.73,h*.27,w*.76);
+    ambient.addColorStop(0,"rgba(218,180,119,.12)");
+    ambient.addColorStop(1,"rgba(218,180,119,0)");
+    ctx.fillStyle=ambient;ctx.fillRect(0,0,w,h);
+    // Small restrained accent, instead of overlapping orbital lines.
+    roundRect(w*.08,h*(v?.058:.092),w*.13,v?5:4,3,pal.line);
+    churchWatermark(w*(v?.07:.07),h*(v?.10:.15),Math.min(w*(v?.27:.16),h*(v?.16:.27)),.18);
+    if(pix){
+      // Two independent zones: information and a large, static, scannable QR.
+      if(v){
+        const cx=w/2;
+        text(church,cx,h*.19,19,"#d7c6a7",800,"center",w*.91);
+        text("OFERTAS E DÍZIMOS",cx,h*.275,38,pal.title,800,"center",w*.90);
+        const tutorial=c.type==="pix_animation"?pixTutorialStep(now):null;
+        text(tutorial?tutorial.label:"Sua generosidade transforma vidas.",cx,h*.340,21,"#f8efe3",600,"center",w*.90);
+        const q=Math.min(w*.53,h*.30),qx=(w-q)/2,qy=h*.385;
+        roundRect(qx-12,qy-12,q+24,q+24,16,"#fff");
+        if(pixQR.complete&&pixQR.naturalWidth)ctx.drawImage(pixQR,qx,qy,q,q);
+        text("PIX: iemp.promessas@gmail.com",cx,h*.739,23,"#ffefd0",800,"center",w*.92);
+        text("Recebedor: Igreja Evangélica",cx,h*.800,17,"#d8c8ad",700,"center",w*.92);
+        text("Ministério Promessas",cx,h*.828,17,"#d8c8ad",700,"center",w*.92);
+        text("Confira o recebedor antes de confirmar.",cx,h*.913,15,"#d0bb9d",500,"center",w*.93);
+      }else{
+        const tx=w*.075,rightEdge=w*.612,textWidth=rightEdge-tx;
+        text(church,tx,h*.155,20,"#d7c6a7",800,"left",textWidth);
+        text("OFERTAS E DÍZIMOS",tx,h*.265,43,pal.title,800,"left",textWidth);
+        const tutorial=c.type==="pix_animation"?pixTutorialStep(now):null;
+        const phrase=tutorial?tutorial.label:"Sua generosidade transforma vidas.";
+        ctx.font="700 29px "+fonts;
+        const lines=cardLines(phrase,textWidth,3);
+        lines.forEach((line,i)=>text(line,tx,h*.373+i*40,29,"#f8efe3",700,"left",textWidth));
+        text("Abra o app do banco e escolha Pix.",tx,h*.548,24,"#dacabb",600,"left",textWidth);
+        text("PIX: iemp.promessas@gmail.com",tx,h*.684,21,"#ffedc5",800,"left",textWidth);
+        text("Recebedor: Igreja Evangélica",tx,h*.753,18,"#d7c4ab",600,"left",textWidth);
+        text("Ministério Promessas",tx,h*.793,18,"#d7c4ab",600,"left",textWidth);
+        text("Confira o nome no banco antes de confirmar.",tx,h*.887,16,"#cbb99f",500,"left",textWidth);
+        const q=Math.min(w*.275,h*.51),qx=w*.68,qy=h*.235;
+        roundRect(qx-15,qy-15,q+30,q+30,17,"#fff");
+        if(pixQR.complete&&pixQR.naturalWidth)ctx.drawImage(pixQR,qx,qy,q,q);
+      }
       ctx.restore();return;
     }
-    logoAt(w/2,h*(v?.18:.20),Math.min(w*.23,h*.25));
-    text(church,w/2,h*(v?.30:.355),v?18:18,"#e5cb9b",800,"center",w*.92);
-    const headFont=v?26:27;
-    text((c.heading||"PALAVRA DE DEUS").toUpperCase(),w/2,h*(v?.375:.43),headFont,pal.title,800,"center",w*.87);
-    const maxWidth=w*(v?.81:.77);
-    const bodyMaxH=h*(v?.31:.30);
-    let fontSize=v?37:43,lines=[];
-    while(fontSize>=18){
-      ctx.font="700 "+fontSize+"px "+fonts;
-      lines=cardLines(c.message,maxWidth,12);
-      if(lines.length*fontSize*1.26<=bodyMaxH)break;
-      fontSize-=2;
+    // Consistent 4-zone typography for Scripture, notices, prayer, and events.
+    text(church,w/2,h*(v?.17:.137),v?18:19,"#d6c4a2",800,"center",w*.89);
+    const heading=String(c.heading||"PALAVRA DE DEUS").toUpperCase();
+    const headingLimit=w*(v?.85:.84);
+    ctx.font="800 "+(v?32:35)+"px "+fonts;
+    const hLines=cardLines(heading,headingLimit,v?3:2);
+    const hLineHeight=v?48:43;
+    const hCenter=h*(v?.320:.270);
+    hLines.forEach((line,i)=>text(line,w/2,hCenter+(i-(hLines.length-1)/2)*hLineHeight,v?32:35,pal.title,800,"center",headingLimit));
+    const width=w*(v?.83:.77),height=h*(v?.275:.295);
+    const fitted=fittedCardLines(c.message,width,height,v?42:51,v?28:30,v?7:5);
+    const lineH=fitted.font*1.40;
+    const center=h*(v?.580:.547);
+    fitted.lines.forEach((line,i)=>text(line,w/2,center+(i-(fitted.lines.length-1)/2)*lineH,fitted.font,"#fff8f0",700,"center",width));
+    if(c.reference){
+      const ref=String(c.reference).trim();
+      text(ref,w/2,h*(v?.820:.806),v?22:23,"#e8cfaa",700,"center",w*.85);
     }
-    const lineHeight=fontSize*1.26,centerY=h*(v?.565:.625);
-    const startY=centerY-(lines.length-1)*lineHeight/2;
-    lines.forEach((line,i)=>text(line,w/2,startY+i*lineHeight,fontSize,pal.body,700,"center",maxWidth));
-    if(c.reference)text(c.reference,w/2,h*(v?.78:.865),v?22:24,pal.small,700,"center",maxWidth);
-    const footY=h*(v?.9:.94);
-    text(motto,w/2,footY,v?15:17,"#c0ac94",600,"center",w*.90);
+    text(motto,w/2,h*(v?.932:.935),v?17:17,"#afa79f",500,"center",w*.88);
     ctx.restore();
   }
+
   function drawPromessasSweep(now,mix,full){
     // Brief logo + light sweep synchronized to the fullscreen transition.
     const p=Math.max(0,Math.min(1,mix)),w=canvas.width,h=canvas.height;
@@ -336,6 +388,18 @@
     const tX=buttonX+buttonW+11,tY=buttonY+buttonH*.55;
     ctx.beginPath();ctx.arc(tX,tY,5+7*pulse,0,Math.PI*2);
     ctx.strokeStyle="rgba(242,200,130,"+(1-.75*pulse)+")";ctx.lineWidth=2;ctx.stroke();
+    // A stylized smartphone demonstrates scanning; never draw over the real Pix QR.
+    const phoneW=v?39:42,phoneH=v?63:65;
+    const phoneX=qx-phoneW-18,phoneY=by+bh*.41;
+    roundRect(phoneX,phoneY,phoneW,phoneH,7,"#e9d5b7");
+    roundRect(phoneX+3,phoneY+4,phoneW-6,phoneH-8,5,"#1a2b3d");
+    ctx.fillStyle="#e9d5b7";ctx.fillRect(phoneX+phoneW*.36,phoneY+4,phoneW*.28,2);
+    const scanProgress=(Math.sin(elapsed*.0035)+1)/2;
+    const sy=phoneY+16+scanProgress*(phoneH-29);
+    ctx.strokeStyle="rgba(115,236,194,.85)";ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(phoneX+8,sy);ctx.lineTo(phoneX+phoneW-8,sy);ctx.stroke();
+    ctx.strokeStyle="rgba(115,236,194,.42)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(phoneX+phoneW+2,sy);ctx.lineTo(qx-8,qy+q*.5);ctx.stroke();
     const detailWidth=contentWidth;
     text(step.label,bx+padding,by+bh*(v?.77:.79),v?15:18,"#ffffff",800,"left",detailWidth);
     text(clampCanvasText(step.detail,detailWidth),bx+padding,by+bh*(v?.91:.92),v?12:13,"#d1c5b6",600,"left",detailWidth);
