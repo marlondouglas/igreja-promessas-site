@@ -191,7 +191,7 @@
     try{
       const response=await fetch(endpoint.origin+endpoint.pathname+"/index.m3u8",{cache:"no-store",signal:controller.signal});
       const manifest=response.ok?await response.text():"";
-      if(manifest.startsWith("#EXTM3U")&&manifest.includes("#EXTINF")){
+      if(manifest.trimStart().startsWith("#EXTM3U")&&(manifest.includes("#EXTINF")||manifest.includes("#EXT-X-STREAM-INF")||manifest.includes("#EXT-X-MAP"))){
         misses=0;show();
       }else if(++misses>=3)hide();
     }catch(_){if(++misses>=3)hide();}
