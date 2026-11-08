@@ -1,0 +1,22 @@
+/* Entrada da Área Kids no site e dentro do aplicativo Android (WebView).
+   Classes isoladas para não afetar a identidade principal da igreja. */
+.nav-kids-entry{color:#f5cb8f!important;background:linear-gradient(130deg,#573c87,#7955b1)!important;border:1px solid #f4cd9c55!important;border-radius:12px!important;padding:10px 12px!important;font-weight:800!important}
+.nav-kids-entry:hover{filter:brightness(1.1)}
+.quicklinks a.quick-kids{border-color:#bd9bf5!important;background:linear-gradient(145deg,#f9f0ff,#fffaf3)!important}
+.quicklinks .quick-kids i{font-style:normal;font-size:25px;display:grid;place-items:center}
+.quicklinks .quick-kids strong{color:#6844a4}
+.kids-entry-home{position:relative;overflow:hidden;background:linear-gradient(125deg,#ede7ff,#fff3d8);border-top:1px solid #e1d5f3;border-bottom:1px solid #ddcfdf;padding:37px 0}
+.kids-entry-home:before{content:"";position:absolute;border:35px solid #ffffff4a;border-radius:50%;height:250px;width:250px;right:-100px;top:-105px;pointer-events:none}
+.kids-entry-inner{display:flex;gap:27px;align-items:center;position:relative;z-index:1}
+.kids-entry-symbol{height:102px;width:112px;border-radius:26px;background:#fff;box-shadow:0 13px 40px #5e359e1f;display:grid;place-items:center;transform:rotate(-6deg);flex-shrink:0}
+.kids-entry-symbol span:first-child{font-size:55px;line-height:1}
+.kids-entry-symbol span:last-child{position:absolute;top:3px;right:8px;font-size:21px;color:#f4a458}
+.kids-entry-copy{flex:1}
+.kids-entry-eyebrow{color:#8667b0;font:800 10px/1.5 system-ui;letter-spacing:.15em}
+.kids-entry-copy h2{color:#333044;font-size:clamp(25px,3vw,35px);margin:5px 0 7px;font-weight:850;letter-spacing:-.035em}
+.kids-entry-copy h2 em{font-style:normal;color:#8054bd}
+.kids-entry-copy p{color:#615974;font-size:13px;line-height:1.55;max-width:680px;margin:0}
+.kids-entry-action{display:inline-flex;align-items:center;justify-content:center;gap:12px;white-space:nowrap;border-radius:15px;background:#6f4db2;color:#fff!important;font-size:13px;font-weight:850;padding:16px 20px;box-shadow:0 12px 26px #6741a13b;flex-shrink:0}
+.kids-entry-action:hover{background:#5f3e9f;transform:translateY(-2px)}
+@media(max-width:900px){.kids-entry-inner{gap:15px}.kids-entry-symbol{height:85px;width:90px}.kids-entry-symbol span:first-child{font-size:45px}.kids-entry-action{padding:14px;font-size:11px}}
+@media(max-width:700px){.kids-entry-home{padding:27px 0}.kids-entry-inner{display:grid;grid-template-columns:66px 1fr;gap:13px}.kids-entry-symbol{height:64px;width:64px;border-radius:15px}.kids-entry-symbol span:first-child{font-size:34px}.kids-entry-symbol span:last-child{font-size:14px}.kids-entry-copy h2{font-size:23px}.kids-entry-copy p{font-size:12px}.kids-entry-action{grid-column:1 / -1;width:100%;margin-top:6px}.quicklinks .quick-kids i{font-size:21px}}
