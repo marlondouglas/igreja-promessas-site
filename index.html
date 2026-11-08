@@ -87,8 +87,57 @@
 </style>
 <script defer src="https://cdn.jsdelivr.net/npm/hls.js@1.6.13/dist/hls.min.js"></script>
 <script defer src="/culto/assistir.js?v=1108buffer3"></script>
-</head><body><a class="skip-to-content" href="#conteudo">Pular para o conteúdo</a>
-<header><div class="wrap nav"><a class="brand" href="#inicio"><img src="logo-promessas.svg" alt="Logo oficial Igreja Promessas" style="height:62px;width:auto;max-width:70px;object-fit:contain;border-radius:4px"><span>IGREJA<br>PROMESSAS</span></a><button class="menu" aria-label="Abrir menu" aria-expanded="false" onclick="let n=document.querySelector('.links');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">☰</button><nav class="links"><a href="#sobre">Quem somos</a><a href="#programacao">Horários</a><a href="/culto/" class="nav-live-entry" id="nav-live-entry">Ao vivo <span id="nav-live-dot" hidden>● NO AR</span></a><a href="/devocional/">Diário de Promessas</a><a href="/kids/" class="nav-kids-entry">🌈 Promessas Kids</a><a href="#mensagens">Mensagens</a><a href="#radio">Rádio Promessas</a><a href="#oracao">Oração</a><a href="#ingressos">Ingressos</a><a href="#contribuicao">Contribuição</a><a class="nav-download" href="/downloads/Igreja-Promessas-Android-v1.2.0.apk" download="Igreja-Promessas-Android-v1.2.0.apk" aria-label="Baixar aplicativo oficial da Igreja Promessas para Android">↓ Baixar App</a><a class="btn" href="#localizacao">Visite-nos</a></nav></div></header>
+
+<style id="promessas-tablet-header-fit-20261108">
+/* Tablet landscape: prevent a long 12-link navigation from escaping the screen.
+   Keep the Ao vivo destination immediately accessible; other sections stay in Menu. */
+.nav-live-quick{display:none;align-items:center;justify-content:center;gap:7px;
+ color:#f4d59b!important;background:#242127;border:1px solid #d9b47785;
+ border-radius:100px;padding:11px 17px;min-height:43px;white-space:nowrap;
+ text-decoration:none;font-size:13px;font-weight:800;letter-spacing:.015em}
+.nav-live-quick span{color:#e9c890;font-size:10px;line-height:1}
+.nav-live-quick:focus-visible{outline:2px solid #f4d59b!important;outline-offset:3px}
+@media(max-width:1600px){
+ header .nav{width:100%;max-width:100%;min-width:0;box-sizing:border-box;
+   padding-inline:clamp(14px,2.6vw,32px);gap:10px;justify-content:flex-start}
+ header .brand{flex-shrink:0;min-width:0}
+ header .nav-live-quick{display:inline-flex;margin-left:auto}
+ header .menu{display:inline-flex!important;position:relative;flex-shrink:0;
+   min-height:43px;min-width:43px;align-items:center;justify-content:center;
+   border:1px solid #e9c68a60;border-radius:11px;background:#1a1c24!important;
+   color:#f7deab!important}
+ header .links{display:none!important;position:absolute;top:100%;left:auto;
+   right:clamp(10px,2vw,32px);width:min(360px,calc(100vw - 20px));
+   box-sizing:border-box;max-height:calc(100dvh - 88px);overflow-y:auto;
+   flex-direction:column;align-items:stretch;gap:0!important;
+   background:#15151b!important;border:1px solid #d9b47765;border-radius:0 0 16px 16px;
+   padding:12px 14px 17px!important;box-shadow:0 19px 35px #000a;z-index:200}
+ header .links.open{display:flex!important}
+ header .links a{display:block;width:100%;min-height:39px;box-sizing:border-box;
+   padding:11px 12px!important;color:#f1e5d2!important;font-size:13px!important;
+   line-height:1.35;white-space:normal;border-bottom:1px solid #ffffff14}
+ header .links .nav-live-entry{display:none!important}
+ header .links .btn{display:flex;align-items:center;justify-content:center;
+   width:100%;min-height:45px;margin-top:8px}
+ #inicio.hero{width:auto;max-width:calc(100% - 16px);box-sizing:border-box}
+ #inicio .hero-pastors-grid{min-width:0;max-width:100%;box-sizing:border-box}
+}
+@media(max-width:760px){
+ header .nav{padding-inline:12px!important;gap:7px}
+ header .brand{gap:5px;letter-spacing:.04em}
+ header .brand img{max-width:46px!important;max-height:46px!important}
+ header .brand span{font-size:11px!important}
+ header .nav-live-quick{padding:8px 11px;font-size:12px;min-height:38px}
+ header .menu{min-width:40px;min-height:40px}
+ header .links{max-height:calc(100dvh - 66px)}
+}
+@media(max-width:360px){
+ header .brand span{font-size:10px!important}
+ header .brand img{max-width:38px!important}
+ header .nav-live-quick{padding:7px 9px}
+}
+</style></head><body><a class="skip-to-content" href="#conteudo">Pular para o conteúdo</a>
+<header><div class="wrap nav"><a class="brand" href="#inicio"><img src="logo-promessas.svg" alt="Logo oficial Igreja Promessas" style="height:62px;width:auto;max-width:70px;object-fit:contain;border-radius:4px"><span>IGREJA<br>PROMESSAS</span></a><a class="nav-live-quick" href="/culto/" aria-label="Assistir ao vivo na Igreja Promessas"><span aria-hidden="true">●</span> Ao vivo</a><button class="menu" aria-label="Abrir menu" aria-expanded="false" onclick="let n=document.querySelector('.links');n.classList.toggle('open');this.setAttribute('aria-expanded',n.classList.contains('open'))">☰</button><nav class="links"><a href="#sobre">Quem somos</a><a href="#programacao">Horários</a><a href="/culto/" class="nav-live-entry" id="nav-live-entry">Ao vivo <span id="nav-live-dot" hidden>● NO AR</span></a><a href="/devocional/">Diário de Promessas</a><a href="/kids/" class="nav-kids-entry">🌈 Promessas Kids</a><a href="#mensagens">Mensagens</a><a href="#radio">Rádio Promessas</a><a href="#oracao">Oração</a><a href="#ingressos">Ingressos</a><a href="#contribuicao">Contribuição</a><a class="nav-download" href="/downloads/Igreja-Promessas-Android-v1.2.0.apk" download="Igreja-Promessas-Android-v1.2.0.apk" aria-label="Baixar aplicativo oficial da Igreja Promessas para Android">↓ Baixar App</a><a class="btn" href="#localizacao">Visite-nos</a></nav></div></header>
 <main id="conteudo"><section class="hero" id="inicio"><div class="wrap hero-pastors-grid"><div class="hero-pastors-stage"><div class="hero-pastors-photo"><img src="pastores-marcelo-michele-recorte.png" alt="Pastores Marcelo e Michele Ângelo" loading="eager"></div><div class="hero-pastors-caption"><strong>Pastores Marcelo e Michele Ângelo</strong></div></div><div class="hero-logo" aria-hidden="true"><img src="logo-promessas.svg" alt=""></div><div class="hero-welcome"><span class="eyebrow">Bem-vindo à Igreja Promessas</span><h1>Uma igreja que busca resgatar almas e restaurar famílias.</h1><p>Mais do que um lugar para visitar, uma comunidade para caminhar junto. Sua história importa.</p><div class="actions"><a class="btn" href="#programacao">Ver horários de cultos</a><a class="btn outline" href="#sobre">Conheça nossa igreja</a><a class="btn hero-download" href="/downloads/Igreja-Promessas-Android-v1.2.0.apk" download="Igreja-Promessas-Android-v1.2.0.apk" aria-label="Baixar aplicativo Android oficial da Igreja Promessas">↓ Baixar App Android</a></div></div></div></section><section class="section alt home-live" id="programacao" aria-labelledby="horarios-titulo"><div class="wrap home-live-grid"><div class="home-schedule"><div class="home-schedule-head"><span class="eyebrow">Nossa semana de fé</span><h2 id="horarios-titulo">Programação de Cultos</h2></div><div class="home-schedule-items"><article class="home-culto-item"><span class="home-culto-day">Domingo</span><div class="home-culto-line"><span class="home-culto-title">Escola Bíblica</span><time class="home-culto-time" datetime="09:00">09h00</time></div></article><article class="home-culto-item"><span class="home-culto-day">Domingo</span><div class="home-culto-line"><span class="home-culto-title">Culto de Adoração</span><time class="home-culto-time" datetime="19:30">19h30</time></div></article><article class="home-culto-item"><span class="home-culto-day">Terça-feira</span><div class="home-culto-line"><span class="home-culto-title">Oração</span><time class="home-culto-time" datetime="19:30">19h30</time></div></article><article class="home-culto-item"><span class="home-culto-day">Quarta-feira</span><div class="home-culto-line"><span class="home-culto-title">Culto</span><time class="home-culto-time" datetime="19:30">19h30</time></div></article></div><p class="home-schedule-note">Horários locais de Governador Valadares (MG)</p></div><div class="home-radio" id="radio" role="region" aria-labelledby="mini-radio-title"><div class="home-radio-head"><h2 id="mini-radio-title">Rádio Promessas</h2><span class="home-radio-live">LOUVORES 24H</span></div><div class="home-player-art" aria-hidden="true"><span class="home-radio-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="12" rx="3"/><path d="M4 8 17 3M10 13a4 4 0 0 1 5 0M9 15a6 6 0 0 1 8 0"/><circle cx="12" cy="17" r=".7" fill="currentColor" stroke="none"/></svg></span><span class="home-radio-wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div><div class="home-radio-controls"><audio id="promessas-radio" autoplay preload="none" playsinline aria-label="Louvores 24 horas, transmissão da Rádio Infinita Graça"><source src="https://stream2.svrdedicado.org:8158/stream" type="audio/mpeg">Seu navegador não suporta reprodução de áudio.</audio><p class="radio-player-note" id="radio-play-status" role="status" aria-live="polite">Sintonizando louvores 24 horas...</p>
 <p class="radio-partner-note">Sinal da <a href="https://www.radioinfinitagraca.com.br/" target="_blank" rel="noopener noreferrer">Rádio Infinita Graça</a>, emissora independente que anuncia programação sem intervalos comerciais.</p><a class="radio-studio-link" href="/radio/">Conheça nossa programação de louvores ↗</a></div></div></div></section><div class="quicklinks" aria-label="Acesso rápido"><a href="#programacao"><i><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 6 3-6 3z"/></svg></i><strong>Programação</strong><span>Confira os horários</span></a><a href="#mensagens"><i><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 6 3-6 3z"/></svg></i><strong>Biblioteca</strong><span>Palavra que edifica</span></a><a href="#radio"><i><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="12" rx="3"/><path d="M5 8 17 3M9 13a3 3 0 0 1 5 0m-6 2a5 5 0 0 1 8 0"/><circle cx="12" cy="17" r=".8" fill="currentColor" stroke="none"/></svg></i><strong>Rádio Promessas</strong><span>Ouça ao vivo</span></a><a href="#oracao"><i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 5.9a4.7 4.7 0 0 0-6.7 0L12 8l-2.1-2.1a4.7 4.7 0 0 0-6.7 6.6L12 21l8.8-8.5a4.7 4.7 0 0 0 0-6.6z"/></svg></i><strong>Oração</strong><span>Oração e acolhimento</span></a><a class="quick-kids" href="/kids/"><i aria-hidden="true">🌈</i><strong>Promessas Kids</strong><span>Vídeos e brincadeiras</span></a><a href="#localizacao"><i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.5"/></svg></i><strong>Como Chegar</strong><span>Localização e rota</span></a></div>
 <section class="kids-entry-home" aria-labelledby="kids-home-heading">
