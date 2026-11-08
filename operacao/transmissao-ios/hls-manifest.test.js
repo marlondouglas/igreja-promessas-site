@@ -191,13 +191,27 @@ test("os flags do relay geram H.264 1280x720 e AAC-LC estéreo", () => {
 });
 
 test("o limite de vídeo fica ativo e só é aplicado depois da resposta WHIP", () => {
-  const limited = whip.applyVideoSenderLimits({ encodings: [{ active: false, scaleResolutionDownBy: 1 }] });
+  const limited = whip.applyVideoSenderLimits({
+    codecs: [{ mimeType: "video/H264" }],
+    headerExtensions: [{}],
+    encodings: [{ active: false, scaleResolutionDownBy: 1 }]
+  });
   assert.equal(limited.encodings[0].active, true);
   assert.equal(limited.encodings[0].scaleResolutionDownBy, 1);
   assert.equal(limited.encodings[0].maxBitrate, 2400000);
+  assert.equal(limited.codecs, undefined);
+  assert.equal(limited.headerExtensions, undefined);
+  const audio = whip.liveAudioTracks([
+    { kind: "audio", readyState: "live" },
+    { kind: "audio", readyState: "ended" },
+    { kind: "video", readyState: "live" }
+  ]);
+  assert.equal(audio.length, 1);
   const src = fs.readFileSync(path.join(dir, "../../culto/transmitir.js"), "utf8");
-  const between = src.slice(src.indexOf("pc.addTrack"), src.indexOf("pc.createOffer"));
+  const between = src.slice(src.indexOf("pc.addTrack(videoTrack)"), src.indexOf("pc.createOffer"));
   assert.equal(between.includes("setParameters"), false);
+  assert.equal(between.includes("new MediaStream"), false);
+  assert.ok(src.includes("for(const t of audioTracks) pc.addTrack(t)"));
   const answer = src.indexOf("setRemoteDescription");
   assert.ok(src.indexOf("await limitVideo(pc)", answer) > answer);
 });

@@ -8,13 +8,15 @@
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.PromessasWhipVideo = api;
 })(typeof globalThis === "undefined" ? undefined : globalThis, function () {
+  function liveAudioTracks(tracks) {
+    return (tracks || []).filter(function (track) {
+      return track && track.kind === "audio" && track.readyState !== "ended";
+    });
+  }
+
   function applyVideoSenderLimits(params) {
     const next = {};
     if (params && params.transactionId) next.transactionId = params.transactionId;
-    if (params && params.codecs) next.codecs = params.codecs;
-    if (params && params.headerExtensions) next.headerExtensions = params.headerExtensions;
-    if (params && params.rtcp) next.rtcp = params.rtcp;
-    if (params && params.degradationPreference) next.degradationPreference = params.degradationPreference;
     const source = params && params.encodings && params.encodings.length ? params.encodings : [{}];
     next.encodings = source.map(function (encoding, index) {
       const copy = Object.assign({}, encoding);
@@ -28,5 +30,5 @@
     return next;
   }
 
-  return { applyVideoSenderLimits: applyVideoSenderLimits };
+  return { applyVideoSenderLimits: applyVideoSenderLimits, liveAudioTracks: liveAudioTracks };
 });

@@ -103,11 +103,17 @@
    const videoTrack=canvas.captureStream(24).getVideoTracks()[0];
    if(!videoTrack)throw new Error("Não foi possível capturar a saída de vídeo.");
    keepVideo=videoTrack;
-   const tracks=[videoTrack,...(window.PromessasAudioStream?.getAudioTracks()||[])];
-   const stream=new MediaStream(tracks);
+   const rawAudio=window.PromessasPreparePublishAudio
+     ? await window.PromessasPreparePublishAudio()
+     : (window.PromessasAudioStream?.getAudioTracks()||[]);
+   const audioTracks=window.PromessasWhipVideo
+     ? window.PromessasWhipVideo.liveAudioTracks(rawAudio)
+     : rawAudio.filter(t=>t&&t.kind==="audio"&&t.readyState!=="ended");
+   if(!audioTracks.length) throw new Error("A mixagem não tem faixa de áudio ao vivo. O envio não começou, para não publicar só vídeo.");
    const pc=new RTCPeerConnection({iceServers:[]});
    peer=pc;
-   for(const t of tracks)pc.addTrack(t,stream);
+   pc.addTrack(videoTrack);
+   for(const t of audioTracks) pc.addTrack(t);
    // Bitrate is applied after the answer. Setting it before createOffer can mark the
    // video encoding inactive: Opus still flows, H.264 is announced, and RTSP gets no frames.
    // HLS viewers need H264; browser default VP8 cannot be repackaged into HLS by MediaMTX.

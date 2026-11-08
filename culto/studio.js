@@ -745,6 +745,11 @@
      status("Não foi possível ativar o áudio. Verifique as permissões de som do navegador.");
    }
  }
+ window.PromessasPreparePublishAudio = async function(){
+   await audioSetup();
+   if(ac?.state==="suspended") await ac.resume().catch(()=>{});
+   return mediaDest?.stream?.getAudioTracks?.() || [];
+ };
  async function musicOn(){
    if(!music)return;
    try{
