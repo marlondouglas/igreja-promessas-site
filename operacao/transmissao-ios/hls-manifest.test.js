@@ -227,6 +227,19 @@ test("o limite de vídeo fica ativo e só é aplicado depois da resposta WHIP", 
   assert.ok(src.indexOf("await limitVideo(pc)", answer) > answer);
 });
 
+test("atraso de 20s usa a janela real e não espera só no começo", () => {
+  assert.equal(hls.liveHoldTarget(0, 40, 20), 20);
+  assert.equal(hls.liveHoldTarget(100, 114, 20), 100.25);
+  assert.equal(hls.liveHoldTarget(0, 0.4, 20), null);
+  const playerSrc = fs.readFileSync(path.join(dir, "../../culto/assistir.js"), "utf8");
+  assert.match(playerSrc, /LIVE_HOLD_SECONDS=20/);
+  assert.match(playerSrc, /liveSyncDuration:20/);
+  const brand = fs.readFileSync(path.join(dir, "../../culto/studio.js"), "utf8");
+  const liveBrand = brand.slice(brand.indexOf("function drawLiveBrand"));
+  assert.match(liveBrand, /diameter=v\?44:48/);
+  assert.doesNotMatch(liveBrand.slice(0, 800), /diameter=v\?63:69/);
+});
+
 test("fMP4 com EXT-X-MAP e áudio separado continua AAC utilizável", () => {
   const master = [
     "#EXTM3U",

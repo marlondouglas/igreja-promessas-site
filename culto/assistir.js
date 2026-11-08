@@ -167,23 +167,28 @@
         alternative();
       }
     }
-    // iOS reproduz HLS nativamente: buscar até ~15s atrás da borda ao vivo
-    // quando a janela disponível já contém 15s. O navegador pode ajustar o ponto.
-    let nativeDelayApplied=false;
+    // Atraso real de ~20s atrás da borda, não uma espera inicial.
+    // iPhone (Safari e Chrome) e o Safari de mesa usam o player nativo: o ajuste é o currentTime.
+    // liveSyncDuration do hls.js não move esses aparelhos.
+    // Se a playlist tiver menos de 20s, o nativo fica no ponto mais antigo que existir.
+    const LIVE_HOLD_SECONDS=20;
     const applyNativeDelay=()=>{
-      if(mode!=="native"||nativeDelayApplied||!el.seekable||!el.seekable.length)return;
+      if(mode!=="native"||!el.seekable||!el.seekable.length)return;
       try{
         const i=el.seekable.length-1;
         const start=el.seekable.start(i),end=el.seekable.end(i);
-        const target=end-15;
-        if(Number.isFinite(target)&&target>=start+0.25){
-          el.currentTime=target;
-          nativeDelayApplied=true;
-        }
-      }catch(_){/* live window may not be ready until playback starts */}
+        const target=window.PromessasHlsManifest&&window.PromessasHlsManifest.liveHoldTarget
+          ?window.PromessasHlsManifest.liveHoldTarget(start,end,LIVE_HOLD_SECONDS)
+          :Math.min(end-.75,Math.max(start+.25,end-LIVE_HOLD_SECONDS));
+        if(!Number.isFinite(target)||target<start+.25||target>end-.5)return;
+        if(end-el.currentTime>=LIVE_HOLD_SECONDS-2)return;
+        if(Math.abs(el.currentTime-target)<1.5)return;
+        el.currentTime=target;
+      }catch(_){/* a janela ao vivo pode ainda não existir */}
     };
     el.addEventListener("loadedmetadata",applyNativeDelay);
     el.addEventListener("canplay",applyNativeDelay);
+    el.addEventListener("timeupdate",applyNativeDelay);
     const useNative=!forceHls&&apple&&!!el.canPlayType("application/vnd.apple.mpegurl");
     if(useNative){
       mode="native";el.src=url;el.load();autoPlay();
@@ -191,8 +196,8 @@
       mode="hls";
       hls=new window.Hls({
         enableWorker:true,lowLatencyMode:false,
-        liveSyncDuration:15,liveMaxLatencyDuration:36,
-        maxBufferLength:32,backBufferLength:25,capLevelToPlayerSize:true
+        liveSyncDuration:20,liveMaxLatencyDuration:48,
+        maxBufferLength:40,backBufferLength:20,capLevelToPlayerSize:true
       });
       hls.on(window.Hls.Events.ERROR,(_event,data)=>{
         if(ticket!==loadNumber||!active||!data.fatal)return;

@@ -357,6 +357,14 @@
     return decision;
   }
 
+  function liveHoldTarget(start, end, holdSeconds) {
+    const hold = holdSeconds > 0 ? holdSeconds : 20;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end - start < 1) return null;
+    const target = Math.min(end - 0.75, Math.max(start + 0.25, end - hold));
+    if (!(target >= start + 0.25 && target <= end - 0.5)) return null;
+    return target;
+  }
+
   function probePlan(masterText) {
     const master = parseMaster(masterText);
     const variant = preferredVariant(master);
@@ -387,6 +395,7 @@
     parseMaster: parseMaster,
     parseMedia: parseMedia,
     probePlan: probePlan,
+    liveHoldTarget: liveHoldTarget,
     preferredVariant: preferredVariant,
     assess: assess,
     choose: choose,
