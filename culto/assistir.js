@@ -17,6 +17,7 @@
   const apple=/iPad|iPhone|iPod/i.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)||(/Safari/.test(ua)&&!/Chrome|CriOS|Edg|FxiOS/.test(ua));
   let endpoint=null,active=false,hls=null,video=null,checking=false,misses=0;
   let watchdog=0,startedAt=0,lastProgressAt=0,lastTime=-1,hasFrames=false,mode="none",loadNumber=0;
+  let codecWarning="";
   function valid(value){
     if(typeof value!=="string")return null;
     try{
@@ -31,7 +32,7 @@
     if(!label)return;
     const playing=kind==="live";
     const text=kind==="live"?"● NO AR":kind==="connecting"?"CONECTANDO VÍDEO":
-      kind==="alternative"?"SINAL DETECTADO":kind==="failed"?"VÍDEO INDISPONÍVEL":"AGUARDANDO CULTO";
+      kind==="alternative"?"VÍDEO INDISPONÍVEL":kind==="failed"?"VÍDEO INDISPONÍVEL":"AGUARDANDO CULTO";
     label.textContent=text;
     label.classList.toggle("is-live",playing);
     if(nav)nav.hidden=!playing;
@@ -40,7 +41,7 @@
       note.textContent=kind==="live"?
         "Você está acompanhando o culto ao vivo. Para ouvir, use o controle de áudio do vídeo.":
         kind==="connecting"?"Sinal ao vivo encontrado. Conectando à imagem; se necessário, toque em Assistir agora.":
-        kind==="alternative"?"O sinal foi encontrado, mas não foi possível confirmar a imagem. Use o player alternativo ou tente novamente.":
+        kind==="alternative"?(codecWarning||"O sinal chegou ao site, mas o navegador não conseguiu mostrar o vídeo. Tente o player original; pode ser necessário corrigir os codecs no notebook."):
         kind==="failed"?"O navegador não conseguiu reproduzir o sinal. Tente novamente; se persistir, verifique o formato de áudio e vídeo enviado pelo estúdio.":
         "Quando o culto começar, a transmissão aparecerá automaticamente nesta página.";
     }
@@ -66,8 +67,8 @@
     const a=document.createElement("a");
     a.href=endpoint.origin+endpoint.pathname;
     a.target="_blank";a.rel="noopener noreferrer";
-    a.textContent="Abrir transmissão em outra janela";
-    a.style.cssText="position:absolute;z-index:7;bottom:10px;left:10px;padding:8px 12px;border-radius:10px;border:1px solid #dfbb80;background:#121823ed;color:#f3dab0;text-decoration:none;font:700 12px Arial,sans-serif";
+    a.textContent="Abrir player original";
+    a.className="live-fallback-link";
     return a;
   }
   function alternative(){
@@ -81,9 +82,15 @@
     frame.referrerPolicy="strict-origin-when-cross-origin";
     frame.allow="autoplay; fullscreen; picture-in-picture";
     frame.setAttribute("allowfullscreen","");
+    const actions=document.createElement("div");
+    actions.className="live-fallback-actions";
     const retry=overlayButton("↻ Tentar vídeo novamente",()=>startVideo());
-    retry.style.cssText="position:absolute;z-index:7;bottom:10px;right:10px;left:auto;transform:none;white-space:normal;max-width:48%;font-size:11px";
-    stage.replaceChildren(frame,linkToPlayer(),retry);
+    const original=linkToPlayer();
+    actions.append(retry,original);
+    const warning=document.createElement("p");
+    warning.className="live-fallback-message";
+    warning.textContent=codecWarning||"Sinal encontrado, mas não foi possível reproduzir a imagem neste navegador.";
+    stage.replaceChildren(frame,warning,actions);
   }
   function startVideo(forceHls=false){
     if(!active||!endpoint)return;
@@ -191,6 +198,12 @@
     try{
       const response=await fetch(endpoint.origin+endpoint.pathname+"/index.m3u8",{cache:"no-store",signal:controller.signal});
       const manifest=response.ok?await response.text():"";
+      const codecs=(manifest.match(/CODECS\s*=\s*["'][^"']+["']/gi)||[]).join(" ").toLowerCase();
+      codecWarning=codecs.includes("opus")
+        ?"O sinal HLS anuncia áudio Opus. O iPhone pode exigir AAC; é preciso adequar o áudio no servidor de transmissão."
+        :/vp09|vp8|av01/.test(codecs)
+          ?"O sinal HLS anuncia um codec de vídeo que pode não ser compatível com este aparelho. Verifique o envio H.264/AAC."
+          :"";
       if(manifest.trimStart().startsWith("#EXTM3U")&&(manifest.includes("#EXTINF")||manifest.includes("#EXT-X-STREAM-INF")||manifest.includes("#EXT-X-MAP"))){
         misses=0;show();
       }else if(++misses>=3)hide();
