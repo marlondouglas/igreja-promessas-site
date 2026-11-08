@@ -17,6 +17,7 @@
   function applyVideoSenderLimits(params) {
     const next = {};
     if (params && params.transactionId) next.transactionId = params.transactionId;
+    next.degradationPreference = "maintain-resolution";
     const source = params && params.encodings && params.encodings.length ? params.encodings : [{}];
     next.encodings = source.map(function (encoding, index) {
       const copy = Object.assign({}, encoding);

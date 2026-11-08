@@ -28,10 +28,23 @@
       return u;
     }catch(_){return null;}
   }
+  const iosDevice=/iPad|iPhone|iPod/i.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  function iosBlocksOpus(codecs){
+    const c=String(codecs||"").toLowerCase();
+    return iosDevice&&c.includes("opus")&&!c.includes("mp4a.40");
+  }
+  function holdAac(message){
+    codecWarning=message;
+    if(active){active=false;loadNumber++;destroy();}
+    if(stage)stage.hidden=true;
+    if(waiting)waiting.hidden=false;
+    status("holding");
+  }
   function status(kind){
     if(!label)return;
     const playing=kind==="live";
     const text=kind==="live"?"● NO AR":kind==="connecting"?"CONECTANDO VÍDEO":
+      kind==="holding"?"AGUARDANDO AAC":
       kind==="alternative"?"VÍDEO INDISPONÍVEL":kind==="failed"?"VÍDEO INDISPONÍVEL":"AGUARDANDO CULTO";
     label.textContent=text;
     label.classList.toggle("is-live",playing);
@@ -42,9 +55,11 @@
         "Você está acompanhando o culto ao vivo. Para ouvir, use o controle de áudio do vídeo.":
         kind==="connecting"?"Sinal ao vivo encontrado. Conectando à imagem; se necessário, toque em Assistir agora.":
         kind==="alternative"?(codecWarning||"O sinal chegou ao site, mas o navegador não conseguiu mostrar o vídeo. Tente o player original; pode ser necessário corrigir os codecs no notebook."):
+        kind==="holding"?(codecWarning||"A saída AAC do iPhone caiu. Este aparelho não troca para o sinal Opus."):
         kind==="failed"?"O navegador não conseguiu reproduzir o sinal. Tente novamente; se persistir, verifique o formato de áudio e vídeo enviado pelo estúdio.":
         "Quando o culto começar, a transmissão aparecerá automaticamente nesta página.";
     }
+    if(kind==="holding")label.title=codecWarning||"";
   }
   function stopWatchdog(){
     if(watchdog){clearInterval(watchdog);watchdog=0;}
@@ -142,6 +157,10 @@
     let recoveries=0;
     function nextPlayback(){
       if(ticket!==loadNumber||!active)return;
+      if(iosDevice&&endpoint&&endpoint.pathname.endsWith("/culto-aac")){
+        holdAac("A saída AAC do iPhone foi interrompida. A página não troca para o Opus e tenta de novo sozinha.");
+        return;
+      }
       if(mode==="native"&&window.Hls&&window.Hls.isSupported()){
         startVideo(true);
       }else{
@@ -237,7 +256,10 @@
           ?valid((local?"http://127.0.0.1:8888":"https://marlon-tiffany.tail7759a9.ts.net")+"/culto")
           :endpoint,controller.signal);
       }
-      if(selected){
+      if(selected&&iosBlocksOpus(selected.codecs)){
+        holdAac("O sinal HLS anuncia áudio Opus. O iPhone pode exigir AAC; é preciso adequar o áudio no servidor de transmissão. A saída AAC caiu; este aparelho não troca para o Opus.");
+        misses=0;
+      }else if(selected){
         const previous=endpoint.href;
         endpoint=selected.target;
         codecWarning=selected.codecs.includes("opus")
@@ -247,7 +269,7 @@
             :"";
         misses=0;
         if(!active)show();
-        else if(previous!==endpoint.href)startVideo();
+        else if(previous!==endpoint.href||mode==="iframe"||mode==="none")startVideo();
       }else if(++misses>=3)hide();
     }catch(_){if(++misses>=3)hide();}
     finally{clearTimeout(timer);checking=false;}

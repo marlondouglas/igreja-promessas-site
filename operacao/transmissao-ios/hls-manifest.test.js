@@ -139,7 +139,9 @@ test("o relay não reinicia o MediaMTX e só publica em culto-aac", () => {
   assert.doesNotMatch(relay, /Restart-Service|mediamtx\.exe/i);
   assert.doesNotMatch(relay, /senha\s*=|password\s*=/i);
   assert.doesNotMatch(relay, /rw_timeout/);
-  assert.match(relay, /"-timeout", "15000000"/);
+  assert.match(relay, /"-timeout", "30000000"/);
+  assert.match(relay, /Nova leitura em/);
+  assert.doesNotMatch(relay, /Start-Sleep -Seconds 3/);
   assert.match(verifier, /UTF8\.GetString/);
   assert.match(verifier, /EXT-X-MEDIA/);
   assert.match(verifier, /EXT-X-MAP/);
@@ -201,6 +203,15 @@ test("o limite de vídeo fica ativo e só é aplicado depois da resposta WHIP", 
   assert.equal(limited.encodings[0].maxBitrate, 2400000);
   assert.equal(limited.codecs, undefined);
   assert.equal(limited.headerExtensions, undefined);
+  assert.equal(limited.degradationPreference, "maintain-resolution");
+  const player = fs.readFileSync(path.join(dir, "../../culto/assistir.js"), "utf8");
+  assert.match(player, /iosBlocksOpus/);
+  assert.match(player, /não troca para o Opus/);
+  const publisher = fs.readFileSync(path.join(dir, "../../culto/transmitir.js"), "utf8");
+  const scene = publisher.slice(publisher.indexOf("promessas-scene"), publisher.indexOf("beforeunload"));
+  assert.match(scene, /phase==="intro"\)start\(\)/);
+  assert.match(scene, /phase==="waiting"\)stop\(\)/);
+  assert.equal(scene.includes('phase==="live")stop'), false);
   const audio = whip.liveAudioTracks([
     { kind: "audio", readyState: "live" },
     { kind: "audio", readyState: "ended" },

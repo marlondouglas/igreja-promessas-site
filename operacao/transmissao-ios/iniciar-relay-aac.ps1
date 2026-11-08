@@ -148,7 +148,7 @@ if ($PadraoTeste) {
   Write-Host "HLS /culto pode responder 404 enquanto o vídeo ainda não chegou. Áudio Opus no RTSP não significa que o WHIP parou."
   $inputArgs = @(
     "-hide_banner", "-loglevel", "warning", "-nostdin",
-    "-timeout", "15000000", "-rtsp_transport", "tcp",
+    "-timeout", "30000000", "-rtsp_transport", "tcp",
     "-i", $Origem,
     "-map", "0:v:0", "-map", "0:a:0"
   )
@@ -157,9 +157,14 @@ $outputArgs = @("-f", "rtsp", "-rtsp_transport", "tcp", $Destino)
 Write-Host "Ctrl+C interrompe. Se der 401, defina PROMESSAS_RTSP_DESTINO nesta janela, sem gravar a senha no arquivo."
 Write-Host "Se o path for recusado, aplique paths-culto-aac.yml e reinicie o MediaMTX manualmente. Este script não reinicia o servidor."
 
+$wait = 2
 while ($true) {
+  $started = Get-Date
   & $ffmpeg @inputArgs @Encode @outputArgs
   $code = $LASTEXITCODE
-  Write-Host "ffmpeg saiu com código $code. Nova tentativa em 3 segundos. Ctrl+C interrompe."
-  Start-Sleep -Seconds 3
+  $ran = ((Get-Date) - $started).TotalSeconds
+  if ($ran -ge 20) { $wait = 2 }
+  Write-Host "Leitura RTSP fechou com código $code. EOF é o leitor que caiu; o WHIP pode continuar em /culto. Nova leitura em $wait s. Ctrl+C interrompe."
+  Start-Sleep -Seconds $wait
+  if ($wait -lt 15) { $wait = [Math]::Min(15, $wait * 2) }
 }
