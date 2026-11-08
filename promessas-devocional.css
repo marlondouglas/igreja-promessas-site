@@ -1,0 +1,30 @@
+
+/* Diário de Promessas no portal principal */
+.devocional-feature{padding:85px 0!important;position:relative;overflow:hidden;background:radial-gradient(ellipse at 70% 20%,#88623930,transparent 50%),linear-gradient(135deg,#17171c,#0d0c12);border-block:1px solid #d7b77a38}
+.devocional-feature .wrap{max-width:1180px}
+.devocional-feature-grid{display:grid;grid-template-columns:1fr 360px;align-items:center;gap:clamp(20px,5vw,75px)}
+.devocional-feature .dev-kicker{display:inline-flex;align-items:center;gap:11px;color:#e8c893;font-size:11px;letter-spacing:.22em;font-weight:850;text-transform:uppercase}
+.devocional-feature .dev-kicker:before{content:"";display:block;width:31px;height:1px;background:#d8b977}
+.devocional-feature h2{font:500 clamp(38px,4.5vw,60px)/1.09 Georgia,serif;color:#fff3df;margin:14px 0 20px}
+.devocional-feature h2 em{font-style:italic;color:#ddbc7d}
+.devocional-feature p{color:#c1b6a7;max-width:50ch;line-height:1.75}
+.devocional-feature .dev-chips{display:flex;gap:10px;flex-wrap:wrap;margin:23px 0}
+.devocional-feature .dev-chips span{font-size:11px;font-weight:800;letter-spacing:.04em;color:#f2d6a4;padding:8px 12px;border-radius:20px;border:1px solid #d6ba7d4b;background:#eac5830b}
+.devocional-feature .dev-action{background:linear-gradient(135deg,#f4dda8,#c59b58);color:#17120a;font-weight:850;padding:14px 23px;border-radius:9px;display:inline-flex;align-items:center;gap:14px;transition:transform .25s}
+.devocional-feature .dev-action:hover{transform:translateY(-3px)}
+.devocional-feature .dev-date{display:block;color:#a99b88;font-size:12px;margin-top:16px}
+.devocional-feature .dev-cover{width:min(100%,340px);aspect-ratio:9/11;margin:0 auto;display:flex;flex-direction:column;justify-content:space-between;text-align:center;position:relative;isolation:isolate;transform:rotate(3deg);border:1px solid #d9be8e8c;border-left:12px solid #624829;border-radius:3px 11px 11px 3px;box-shadow:22px 28px 50px #0008;overflow:hidden;padding:27px 24px;background:radial-gradient(ellipse at 50% 54%,#6c4c2b84,transparent 46%),linear-gradient(150deg,#282422,#101017)}
+.devocional-feature .dev-cover:before{content:"";position:absolute;inset:14px;border:1px solid #cfa66a70;pointer-events:none}
+.devocional-feature .dev-cover:after{content:"";position:absolute;inset:-50%;z-index:-1;opacity:.6;background:repeating-radial-gradient(circle,transparent 0 45px,#d8b87c20 46px 47px);animation:devrotate 55s linear infinite}
+.devocional-feature .dev-cover .cover-brand{display:flex;align-items:center;justify-content:center;gap:9px;color:#f1d9a6;letter-spacing:.15em;font-size:11px;font-weight:850}
+.devocional-feature .dev-cover .cover-brand img{width:39px;height:39px;object-fit:contain}
+.devocional-feature .dev-cover .cover-middle img{width:95px;height:95px;object-fit:contain;margin:0 auto 18px;filter:drop-shadow(0 0 21px #ebc27e77);animation:devglow 4.5s ease-in-out infinite}
+.devocional-feature .dev-cover .cover-middle strong{display:block;font:600 clamp(25px,2.5vw,36px)/1.15 Georgia,serif;color:#f5dfb2}
+.devocional-feature .dev-cover .cover-middle span{display:block;font:italic 17px Georgia,serif;color:#e1c188;margin-top:13px}
+.devocional-feature .dev-cover .cover-tail{border-top:1px solid #d1af7577;color:#c1a77b;font-weight:850;font-size:9px;letter-spacing:.16em;padding-top:16px}
+@keyframes devrotate{to{transform:rotate(360deg)}}
+@keyframes devglow{50%{filter:drop-shadow(0 0 35px #ffd892c4);transform:scale(1.035)}}
+html.promessas-native-app .nav-download,html.promessas-native-app .hero-download,html.promessas-native-app .app-download-inline,html.promessas-native-app a[href*="/downloads/Igreja-Promessas-Android"]{display:none!important}
+html.promessas-native-app .app-native-site-link{color:#f0cc8d!important;font-weight:800}
+@media(max-width:750px){.devocional-feature{padding:55px 0!important}.devocional-feature-grid{grid-template-columns:1fr;gap:40px}.devocional-feature h2{font-size:39px}.devocional-feature .dev-cover{max-width:270px}.devocional-feature .dev-cover .cover-middle img{height:75px;width:75px}}
+@media(prefers-reduced-motion:reduce){.devocional-feature .dev-cover:after,.devocional-feature .dev-cover .cover-middle img{animation:none}}
