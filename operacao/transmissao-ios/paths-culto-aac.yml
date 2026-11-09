@@ -1,0 +1,19 @@
+# Use somente se o ffmpeg for recusado ao publicar em /culto-aac.
+# Não substitua o yml inteiro. Não apague o path culto. Não cole senha.
+# Não mude hlsVariant: isso não converte Opus em AAC.
+# Guarde uma cópia do yml antes. Reiniciar o MediaMTX é manual e fica para depois do backup.
+#
+# Dentro do bloco paths: que já existe, acrescente:
+#
+#   culto-aac:
+#     source: publisher
+#
+# O hook abaixo é opcional e só depois do -PadraoTeste passar no verificador.
+# MediaMTX recente usa runOnOnline. Se o binário recusar essa chave, use runOnReady.
+#
+#   culto:
+#     runOnOnline: powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:/Users/MARLO/Documents/Igreja-Promessas-Live-Server/relay/iniciar-relay-aac.ps1 -AguardarCulto
+#     runOnOnlineRestart: yes
+#
+# No Windows o MediaMTX pode não derrubar o ffmpeg filho quando o culto acaba.
+# Depois do culto, rode iniciar-relay-aac.ps1 -Parar.

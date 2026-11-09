@@ -745,6 +745,11 @@
      status("Não foi possível ativar o áudio. Verifique as permissões de som do navegador.");
    }
  }
+ window.PromessasPreparePublishAudio = async function(){
+   await audioSetup();
+   if(ac?.state==="suspended") await ac.resume().catch(()=>{});
+   return mediaDest?.stream?.getAudioTracks?.() || [];
+ };
  async function musicOn(){
    if(!music)return;
    try{
@@ -937,39 +942,31 @@
  function drawLiveBrand(t){
    // Rendered into the program canvas, so viewers see this branding as part of the signal.
    const w=canvas.width,v=format==="vertical";
-   const badgeW=v?123:148,badgeH=40,badgeX=w-badgeW-19,badgeY=24;
-   const cx=v?55:59,cy=53,diameter=v?63:69;
-   const labelX=v?105:111,brandW=v?435:510;
+   const badgeW=v?96:108,badgeH=28,badgeX=w-badgeW-14,badgeY=14;
+   const cx=v?36:38,cy=34,diameter=v?44:48;
+   const labelX=v?66:70,brandW=v?250:320;
    ctx.save();
-   roundRect(18,18,brandW,73,15,"rgba(7,13,24,.75)");
+   roundRect(12,12,brandW,46,12,"rgba(7,13,24,.75)");
    ctx.strokeStyle="rgba(230,193,128,.30)";
    ctx.lineWidth=1;
-   ctx.beginPath();ctx.roundRect(18.5,18.5,brandW-1,72,15);ctx.stroke();
+   ctx.beginPath();ctx.roundRect(12.5,12.5,brandW-1,45,12);ctx.stroke();
    logoAt(cx,cy,diameter);
-   // Gentle orbiting highlights and glow, preserving the church's original mark.
-   const pulse=.5+.5*Math.sin(t*1.55),orbit=t*.48;
+   const pulse=.82+.18*Math.sin(t*.7),orbit=t*.22;
    ctx.save();
-   ctx.shadowColor="rgba(241,204,141,.75)";
-   ctx.shadowBlur=5+4*pulse;
-   ctx.lineWidth=2.1;ctx.lineCap="round";
-   ctx.strokeStyle="rgba(246,210,147,"+(.52+.34*pulse)+")";
-   ctx.beginPath();ctx.arc(cx,cy,diameter*.62,orbit,orbit+Math.PI*.72);ctx.stroke();
-   ctx.lineWidth=1.25;
-   ctx.strokeStyle="rgba(253,231,177,"+(.29+.3*pulse)+")";
-   ctx.beginPath();ctx.arc(cx,cy,diameter*.67,-orbit*.7,-orbit*.7+Math.PI*.48);ctx.stroke();
+   ctx.lineWidth=1.2;ctx.lineCap="round";
+   ctx.strokeStyle="rgba(246,210,147,"+(.42+.16*pulse)+")";
+   ctx.beginPath();ctx.arc(cx,cy,diameter*.62,orbit,orbit+Math.PI*.55);ctx.stroke();
    ctx.restore();
    if(v){
-     text("IGREJA MINISTÉRIO",labelX,47,17,"#fff2de",800,"left",brandW-(labelX-18)-13);
-     text("PROMESSAS",labelX,70,20,"#f2d49b",800,"left",brandW-(labelX-18)-13);
+     text("IGREJA MINISTÉRIO",labelX,28,12,"#fff2de",800,"left",brandW-(labelX-12)-8);
+     text("PROMESSAS",labelX,44,14,"#f2d49b",800,"left",brandW-(labelX-12)-8);
    }else{
-     text(church,labelX,56,20,"#fff2de",800,"left",brandW-(labelX-18)-13);
+     text(church,labelX,34,14,"#fff2de",800,"left",brandW-(labelX-12)-8);
    }
-   ctx.shadowColor="rgba(0,0,0,.30)";ctx.shadowBlur=9;
-   roundRect(badgeX,badgeY,badgeW,badgeH,12,"rgba(144,31,43,.95)");
-   ctx.shadowBlur=0;
-   ctx.fillStyle="rgba(255,255,255,"+(.80+.20*pulse)+")";
-   ctx.beginPath();ctx.arc(badgeX+23,badgeY+badgeH*.5,5.1,0,Math.PI*2);ctx.fill();
-   text("NO AR",badgeX+(badgeW+18)/2,badgeY+badgeH*.51,v?16:17,"#fff9ee",800,"center",badgeW-45);
+   roundRect(badgeX,badgeY,badgeW,badgeH,10,"rgba(144,31,43,.95)");
+   ctx.fillStyle="rgba(255,255,255,"+(.86+.14*pulse)+")";
+   ctx.beginPath();ctx.arc(badgeX+16,badgeY+badgeH*.5,3.6,0,Math.PI*2);ctx.fill();
+   text("NO AR",badgeX+(badgeW+10)/2,badgeY+badgeH*.52,12,"#fff9ee",800,"center",badgeW-34);
    ctx.restore();
  }
  function drawCamera(t){

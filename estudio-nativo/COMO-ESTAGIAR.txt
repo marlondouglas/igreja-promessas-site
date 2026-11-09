@@ -1,0 +1,40 @@
+Estúdio nativo — o que o processo faz
+
+Não abra o exe que está em teste-estudio-nativo-20261108-205731.
+Aquele arquivo, ao ser aberto, cria %LOCALAPPDATA%\IgrejaPromessas\Estudio,
+pode apagar stream-key.bin se não conseguir ler, e chama o ffmpeg só para
+listar câmera e microfone. Não publica sozinho, mas não é um teste mudo.
+
+Use o exe deste pacote.
+
+Teste sem câmera, sem microfone, sem transmissão e sem gravar configuração:
+
+  $env:PATH = "C:\caminho\do\ffmpeg-9.0.2;" + $env:PATH
+  cd a pasta deste pacote
+  .\EstudioPromessas.exe --smoke-test
+
+O mesmo vale para --offline. Saída:
+  0  janela criada, ffmpeg visto neste processo, três mídias ao lado do exe
+  1  a janela não foi criada
+  2  ffmpeg.exe não está ao lado do exe nem no PATH deste processo
+  4  falta abertura, encerramento ou tela final
+  some os números se houver mais de uma falta
+
+Não muda o PATH do Windows. Não fala com /culto-aac. O supervisor 15984
+pode continuar publicando /culto-aac durante esse teste.
+
+Deixe DejaVuSans.ttf ao lado do exe. Sem ele o texto do card não desenha.
+O teste mudo não abre card, música nem câmera. Não apaga stream-key.bin.
+
+Um só publicador de /culto-aac
+
+Não aperte Iniciar apresentação nem Conectar transmissão agora enquanto
+o supervisor 15984 estiver publicando /culto-aac. Os dois no mesmo caminho
+se derrubam. --camera publica só em camera-pc. O celular, se for usado,
+publica só em camera-remota. Este pacote não altera o MediaMTX.
+
+Senha
+
+Enquanto o ffmpeg transmite, a URL com a senha aparece na linha de comando
+do processo. O Gerenciador de Tarefas pode vê-la. O registro da tela não
+mostra a senha. Não há outro meio com o ffmpeg de linha de comando.

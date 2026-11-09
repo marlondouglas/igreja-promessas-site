@@ -28,10 +28,23 @@
       return u;
     }catch(_){return null;}
   }
+  const iosDevice=/iPad|iPhone|iPod/i.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  function iosBlocksOpus(codecs){
+    const c=String(codecs||"").toLowerCase();
+    return iosDevice&&c.includes("opus")&&!c.includes("mp4a.40");
+  }
+  function holdAac(message){
+    codecWarning=message;
+    if(active){active=false;loadNumber++;destroy();}
+    if(stage)stage.hidden=true;
+    if(waiting)waiting.hidden=false;
+    status("holding");
+  }
   function status(kind){
     if(!label)return;
     const playing=kind==="live";
     const text=kind==="live"?"● NO AR":kind==="connecting"?"CONECTANDO VÍDEO":
+      kind==="holding"?"AGUARDANDO AAC":
       kind==="alternative"?"VÍDEO INDISPONÍVEL":kind==="failed"?"VÍDEO INDISPONÍVEL":"AGUARDANDO CULTO";
     label.textContent=text;
     label.classList.toggle("is-live",playing);
@@ -42,9 +55,11 @@
         "Você está acompanhando o culto ao vivo. Para ouvir, use o controle de áudio do vídeo.":
         kind==="connecting"?"Sinal ao vivo encontrado. Conectando à imagem; se necessário, toque em Assistir agora.":
         kind==="alternative"?(codecWarning||"O sinal chegou ao site, mas o navegador não conseguiu mostrar o vídeo. Tente o player original; pode ser necessário corrigir os codecs no notebook."):
+        kind==="holding"?(codecWarning||"A saída AAC do iPhone caiu. Este aparelho não troca para o sinal Opus."):
         kind==="failed"?"O navegador não conseguiu reproduzir o sinal. Tente novamente; se persistir, verifique o formato de áudio e vídeo enviado pelo estúdio.":
         "Quando o culto começar, a transmissão aparecerá automaticamente nesta página.";
     }
+    if(kind==="holding")label.title=codecWarning||"";
   }
   function stopWatchdog(){
     if(watchdog){clearInterval(watchdog);watchdog=0;}
@@ -142,29 +157,38 @@
     let recoveries=0;
     function nextPlayback(){
       if(ticket!==loadNumber||!active)return;
+      if(iosDevice&&endpoint&&endpoint.pathname.endsWith("/culto-aac")){
+        holdAac("A saída AAC do iPhone foi interrompida. A página não troca para o Opus e tenta de novo sozinha.");
+        return;
+      }
       if(mode==="native"&&window.Hls&&window.Hls.isSupported()){
         startVideo(true);
       }else{
         alternative();
       }
     }
-    // iOS reproduz HLS nativamente: buscar até ~15s atrás da borda ao vivo
-    // quando a janela disponível já contém 15s. O navegador pode ajustar o ponto.
-    let nativeDelayApplied=false;
+    // Atraso real de ~20s atrás da borda, não uma espera inicial.
+    // iPhone (Safari e Chrome) e o Safari de mesa usam o player nativo: o ajuste é o currentTime.
+    // liveSyncDuration do hls.js não move esses aparelhos.
+    // Se a playlist tiver menos de 20s, o nativo fica no ponto mais antigo que existir.
+    const LIVE_HOLD_SECONDS=20;
     const applyNativeDelay=()=>{
-      if(mode!=="native"||nativeDelayApplied||!el.seekable||!el.seekable.length)return;
+      if(mode!=="native"||!el.seekable||!el.seekable.length)return;
       try{
         const i=el.seekable.length-1;
         const start=el.seekable.start(i),end=el.seekable.end(i);
-        const target=end-15;
-        if(Number.isFinite(target)&&target>=start+0.25){
-          el.currentTime=target;
-          nativeDelayApplied=true;
-        }
-      }catch(_){/* live window may not be ready until playback starts */}
+        const target=window.PromessasHlsManifest&&window.PromessasHlsManifest.liveHoldTarget
+          ?window.PromessasHlsManifest.liveHoldTarget(start,end,LIVE_HOLD_SECONDS)
+          :Math.min(end-.75,Math.max(start+.25,end-LIVE_HOLD_SECONDS));
+        if(!Number.isFinite(target)||target<start+.25||target>end-.5)return;
+        if(end-el.currentTime>=LIVE_HOLD_SECONDS-2)return;
+        if(Math.abs(el.currentTime-target)<1.5)return;
+        el.currentTime=target;
+      }catch(_){/* a janela ao vivo pode ainda não existir */}
     };
     el.addEventListener("loadedmetadata",applyNativeDelay);
     el.addEventListener("canplay",applyNativeDelay);
+    el.addEventListener("timeupdate",applyNativeDelay);
     const useNative=!forceHls&&apple&&!!el.canPlayType("application/vnd.apple.mpegurl");
     if(useNative){
       mode="native";el.src=url;el.load();autoPlay();
@@ -172,8 +196,8 @@
       mode="hls";
       hls=new window.Hls({
         enableWorker:true,lowLatencyMode:false,
-        liveSyncDuration:15,liveMaxLatencyDuration:36,
-        maxBufferLength:32,backBufferLength:25,capLevelToPlayerSize:true
+        liveSyncDuration:20,liveMaxLatencyDuration:48,
+        maxBufferLength:40,backBufferLength:20,capLevelToPlayerSize:true
       });
       hls.on(window.Hls.Events.ERROR,(_event,data)=>{
         if(ticket!==loadNumber||!active||!data.fatal)return;
@@ -237,7 +261,10 @@
           ?valid((local?"http://127.0.0.1:8888":"https://marlon-tiffany.tail7759a9.ts.net")+"/culto")
           :endpoint,controller.signal);
       }
-      if(selected){
+      if(selected&&iosBlocksOpus(selected.codecs)){
+        holdAac("O sinal HLS anuncia áudio Opus. O iPhone pode exigir AAC; é preciso adequar o áudio no servidor de transmissão. A saída AAC caiu; este aparelho não troca para o Opus.");
+        misses=0;
+      }else if(selected){
         const previous=endpoint.href;
         endpoint=selected.target;
         codecWarning=selected.codecs.includes("opus")
@@ -247,7 +274,7 @@
             :"";
         misses=0;
         if(!active)show();
-        else if(previous!==endpoint.href)startVideo();
+        else if(previous!==endpoint.href||mode==="iframe"||mode==="none")startVideo();
       }else if(++misses>=3)hide();
     }catch(_){if(++misses>=3)hide();}
     finally{clearTimeout(timer);checking=false;}
