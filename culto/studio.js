@@ -1,7 +1,7 @@
 "use strict";
-/* CENTRAL DE TRANSMISSÃO — estúdio de ensaio privado NO NAVEGADOR.
-   Sem servidor de ingestão/YouTube configurado: NENHUM vídeo é publicado por estes controles.
-   A saída do canvas pode ser capturada por um encoder externo autorizado. */
+/* CENTRAL DE TRANSMISSÃO — composição e prévia no navegador.
+   transmitir.js controla o envio WHIP quando o operador habilita a publicação.
+   A prévia, por si só, não confirma recepção no servidor ou reprodução pública. */
 (()=>{
  const $=id=>document.getElementById(id);
  const canvas=$("program-canvas"),ctx=canvas.getContext("2d",{alpha:false});
@@ -544,12 +544,12 @@
    }
    $("scene-status").textContent=transitions[p]||"EM ESPERA";
    $("current-scene").textContent="Cena: "+(transitions[p]||"Em espera");
-   $("studio-badge").textContent="● ENSAIO LOCAL · "+(transitions[p]||"EM ESPERA");
+   $("studio-badge").textContent="● PRÉVIA · "+(transitions[p]||"EM ESPERA");
    $("cancel").hidden=p!=="countdown";
    $("skip-intro").hidden=p!=="intro"||!$("test-mode").checked;
    $("skip-outro").hidden=p!=="outro"||!$("test-mode").checked;
    $("start").hidden=!["waiting","done"].includes(p);
-   $("start").textContent=p==="done"?"↻ Iniciar novo ensaio":"▶ Iniciar apresentação";
+   $("start").textContent=p==="done"?"↻ Iniciar nova apresentação":"▶ Iniciar apresentação";
    $("pause").disabled=p!=="live";
    $("pause").hidden=p==="paused";
    $("resume").hidden=p!=="paused";
@@ -563,13 +563,13 @@
    else pauseFilms();
    window.dispatchEvent(new CustomEvent("promessas-scene",{detail:{phase:p}}));
    const messages={
-    waiting:"Pronto para preparar a câmera. Nenhum vídeo será enviado para a internet.",
+    waiting:"Pronto para preparar a câmera. O envio começa somente com a publicação habilitada e a apresentação iniciada.",
     countdown:"Contagem regressiva de 10 segundos em andamento. Você ainda pode cancelar.",
     intro:"Abertura Promessas R5 (5 minutos), com narração e música integradas. Após o vídeo, entra a câmera.",
-    live:"Câmera no monitor de programação. Para o público assistir, é necessário um encoder/transmissão conectado.",
+    live:"Câmera no monitor de programação. Confira o estado do envio na seção Conectar à igreja e valide a reprodução na página do público.",
     paused:"Imagem de pausa no monitor de programação. A câmera está oculta da saída.",
     outro:"Encerramento Promessas R5 (2 minutos), com áudio original. A arte final aparecerá ao terminar.",
-    done:"Apresentação encerrada com a tela final. Nenhuma transmissão foi enviada à internet."
+    done:"Apresentação encerrada com a tela final. Se o envio estiver conectado, a arte final permanece por 18 segundos antes do encerramento do sinal."
    };
    status(messages[p]||"");
    updateIndicator();
@@ -624,7 +624,7 @@
        track.addEventListener("ended",()=>{camReady=false;if(phase==="live"){reason="camera";setPhase("paused");}});
        track.addEventListener("mute",()=>{if(phase==="live"){reason="camera";setPhase("paused");}});
      }
-     $("camera-note").textContent="✓ Câmera e microfone autorizados. Vídeo usado somente nesta prévia local.";
+     $("camera-note").textContent="✓ Câmera e microfone autorizados. Confira a prévia; o vídeo pode ser publicado quando o envio estiver habilitado.";
      return true;
    }catch(error){
      const kind=error?.name||"";

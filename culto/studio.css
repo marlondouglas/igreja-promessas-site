@@ -179,3 +179,14 @@ input:focus,textarea:focus,select:focus{border-color:#e5bd7c!important}
 .audio-monitor-row button{flex:0 0 auto;border-color:#aa9166;color:#f7d8a2}
 .audio-monitor-row button[aria-pressed="false"]{color:#a9b3c4;border-color:#414956}
 .audio-monitor-row small{font-size:10px;color:#a9b3be;line-height:1.5;flex:1 1 220px}
+
+
+/* Conexao local ou de outro notebook, com instrucoes junto ao destino. */
+.publisher-location{padding:14px;border:1px solid #4b4d52;border-radius:12px;background:#0e1621;margin:17px 0 12px}
+.publisher-location label{margin-top:0}
+.publisher-location select{font-weight:700;color:#f4d9ac}
+.publisher-guidance{color:#b8c1cf;font-size:11px;line-height:1.6;margin:10px 0 0;overflow-wrap:anywhere}
+.publisher-environment{border-left:3px solid #a68a5e;padding:9px 11px;background:#dcb9770d;border-radius:0 8px 8px 0;line-height:1.55}
+.output-help #publish-status{line-height:1.6;overflow-wrap:anywhere}
+.publishing-actions #local-signal-link[hidden]{display:none!important}
+@media(max-width:470px){.publisher-location{padding:12px}.publisher-location select{font-size:11px;padding:11px 9px}.output-help .card-top{align-items:flex-start;flex-wrap:wrap;gap:9px}}

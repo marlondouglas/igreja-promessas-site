@@ -1,0 +1,4 @@
+{
+  "remoteWhipUrl": "",
+  "note": "Preencher somente depois de configurar e testar a entrada WHIP HTTPS e a conectividade WebRTC do servidor. Nao incluir senhas ou credenciais TURN neste arquivo publico."
+}
