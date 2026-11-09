@@ -1,7 +1,7 @@
 "use strict";
-/* Igreja Promessas — player público HLS.
- * iOS: use reprodução HLS nativa; demais navegadores: hls.js com recuperação.
- * O selo NO AR só aparece após o início de quadros de vídeo, não após obter a playlist.
+/* Igreja Promessas — player público HLS melhorado.
+ * Tenta AAC primeiro, native no iOS, hls.js nos outros, e fallback mais robusto.
+ * Mostra mensagens claras se o codec for incompatível.
  */
 (()=>{
   const isHome=!!document.getElementById("home-live-holder");
@@ -41,8 +41,8 @@
       note.textContent=kind==="live"?
         "Você está acompanhando o culto ao vivo. Para ouvir, use o controle de áudio do vídeo.":
         kind==="connecting"?"Sinal ao vivo encontrado. Conectando à imagem; se necessário, toque em Assistir agora.":
-        kind==="alternative"?(codecWarning||"O sinal chegou ao site, mas o navegador não conseguiu mostrar o vídeo. Tente o player original; pode ser necessário corrigir os codecs no notebook."):
-        kind==="failed"?"O navegador não conseguiu reproduzir o sinal. Tente novamente; se persistir, verifique o formato de áudio e vídeo enviado pelo estúdio.":
+        kind==="alternative"?(codecWarning||"O sinal chegou ao site, mas o navegador não conseguiu mostrar o vídeo. Tente o player original ou verifique os codecs no servidor (H.264 + AAC)."):
+        kind==="failed"?"O navegador não conseguiu reproduzir o sinal. Tente novamente; se persistir, o servidor precisa enviar H.264/AAC.":
         "Quando o culto começar, a transmissão aparecerá automaticamente nesta página.";
     }
   }
@@ -78,7 +78,7 @@
     status("alternative");
     const frame=document.createElement("iframe");
     frame.title="Player alternativo ao vivo da Igreja Promessas";
-    frame.src=endpoint.origin+endpoint.pathname+"?autoplay=true&muted=true&playsInline=true";
+    frame.src=endpoint.origin+endpoint.pathname+"?autoplay=1&muted=1";
     frame.referrerPolicy="strict-origin-when-cross-origin";
     frame.allow="autoplay; fullscreen; picture-in-picture";
     frame.setAttribute("allowfullscreen","");
@@ -89,7 +89,7 @@
     actions.append(retry,original);
     const warning=document.createElement("p");
     warning.className="live-fallback-message";
-    warning.textContent=codecWarning||"Sinal encontrado, mas não foi possível reproduzir a imagem neste navegador.";
+    warning.textContent=codecWarning||"Sinal encontrado, mas não foi possível reproduzir a imagem neste navegador. Tente o player original.";
     stage.replaceChildren(frame,warning,actions);
   }
   function startVideo(forceHls=false){
@@ -138,7 +138,10 @@
     };
     el.addEventListener("playing",()=>{if(el.videoWidth>0&&typeof el.requestVideoFrameCallback!=="function")frameReady();});
     el.addEventListener("loadeddata",autoPlay,{once:true});
-    el.addEventListener("error",()=>{if(ticket===loadNumber&&active)nextPlayback();},{once:true});
+    el.addEventListener("error",(e)=>{
+      console.warn("Video error", e);
+      if(ticket===loadNumber&&active)nextPlayback();
+    },{once:true});
     let recoveries=0;
     function nextPlayback(){
       if(ticket!==loadNumber||!active)return;
@@ -148,8 +151,6 @@
         alternative();
       }
     }
-    // iOS reproduz HLS nativamente: buscar até ~15s atrás da borda ao vivo
-    // quando a janela disponível já contém 15s. O navegador pode ajustar o ponto.
     let nativeDelayApplied=false;
     const applyNativeDelay=()=>{
       if(mode!=="native"||nativeDelayApplied||!el.seekable||!el.seekable.length)return;
@@ -161,11 +162,11 @@
           el.currentTime=target;
           nativeDelayApplied=true;
         }
-      }catch(_){/* live window may not be ready until playback starts */}
+      }catch(_){}
     };
     el.addEventListener("loadedmetadata",applyNativeDelay);
     el.addEventListener("canplay",applyNativeDelay);
-    const useNative=!forceHls&&apple&&!!el.canPlayType("application/vnd.apple.mpegurl");
+    const useNative=!forceHls&&(apple || el.canPlayType("application/vnd.apple.mpegurl"))&&!!el.canPlayType("application/vnd.apple.mpegurl");
     if(useNative){
       mode="native";el.src=url;el.load();autoPlay();
     }else if(window.Hls&&window.Hls.isSupported()){
@@ -173,12 +174,14 @@
       hls=new window.Hls({
         enableWorker:true,lowLatencyMode:false,
         liveSyncDuration:15,liveMaxLatencyDuration:36,
-        maxBufferLength:32,backBufferLength:25,capLevelToPlayerSize:true
+        maxBufferLength:32,backBufferLength:25,capLevelToPlayerSize:true,
+        debug:false
       });
       hls.on(window.Hls.Events.ERROR,(_event,data)=>{
+        console.warn("HLS error", data);
         if(ticket!==loadNumber||!active||!data.fatal)return;
-        if(recoveries++<1&&data.type===window.Hls.ErrorTypes.NETWORK_ERROR){hls.startLoad();return;}
-        if(recoveries<2&&data.type===window.Hls.ErrorTypes.MEDIA_ERROR){hls.recoverMediaError();return;}
+        if(recoveries++<2&&data.type===window.Hls.ErrorTypes.NETWORK_ERROR){hls.startLoad();return;}
+        if(recoveries<3&&data.type===window.Hls.ErrorTypes.MEDIA_ERROR){hls.recoverMediaError();return;}
         nextPlayback();
       });
       hls.on(window.Hls.Events.MANIFEST_PARSED,autoPlay);
@@ -192,8 +195,8 @@
     watchdog=setInterval(()=>{
       if(ticket!==loadNumber||!active){stopWatchdog();return;}
       const now=Date.now();
-      if(!hasFrames&&now-startedAt>16000){nextPlayback();return;}
-      if(hasFrames&&!el.paused&&!el.seeking&&now-lastProgressAt>22000){nextPlayback();}
+      if(!hasFrames&&now-startedAt>20000){nextPlayback();return;}
+      if(hasFrames&&!el.paused&&!el.seeking&&now-lastProgressAt>25000){nextPlayback();}
     },2000);
   }
   function show(){
@@ -226,24 +229,21 @@
       if(preferredEndpoint){
         try{
           const candidate=await fetchManifest(preferredEndpoint,controller.signal);
-          // Never switch the public stream until the relay explicitly advertises AAC and H.264.
-          if(candidate&&candidate.codecs.includes("mp4a.40")&&candidate.codecs.includes("avc1.")){
+          if(candidate&&(candidate.codecs.includes("mp4a.40")||candidate.codecs.includes("aac"))&&candidate.codecs.includes("avc1.")){
             selected=candidate;
           }
-        }catch(_){/* The optional AAC relay may not be running yet. */}
+        }catch(_){}
       }
       if(!selected){
-        selected=await fetchManifest(endpoint.pathname.endsWith("/culto-aac")
-          ?valid((local?"http://127.0.0.1:8888":"https://marlon-tiffany.tail7759a9.ts.net")+"/culto")
-          :endpoint,controller.signal);
+        selected=await fetchManifest(endpoint,controller.signal);
       }
       if(selected){
         const previous=endpoint.href;
         endpoint=selected.target;
         codecWarning=selected.codecs.includes("opus")
-          ?"O sinal HLS anuncia áudio Opus. O iPhone pode exigir AAC; é preciso adequar o áudio no servidor de transmissão."
+          ?"Áudio em Opus detectado. iPhone e alguns navegadores precisam de AAC. Ative a saída /culto-aac no servidor."
           :/vp09|vp8|av01/.test(selected.codecs)
-            ?"O sinal anuncia um codec de vídeo incompatível. Verifique o envio H.264/AAC."
+            ?"Vídeo em codec incompatível (VP9/AV1). O servidor precisa enviar H.264."
             :"";
         misses=0;
         if(!active)show();
@@ -265,7 +265,7 @@
         const config=await response.json();
         if(config.enabled!==true)return;
         endpoint=valid(config.hlsPageUrl);
-        preferredEndpoint=valid(config.hlsCompatiblePageUrl);
+        preferredEndpoint=valid(config.hlsCompatiblePageUrl||config.iosHlsPageUrl);
         if(["horizontal","vertical"].includes(config.format))holder.dataset.format=config.format;
       }catch(_){return;}
     }
@@ -273,7 +273,7 @@
     await check();
     setInterval(check,10000);
     document.addEventListener("visibilitychange",()=>{
-      if(!document.hidden&&active&&mode==="native"&&video&&!hasFrames){
+      if(!document.hidden&&active&&video&&!hasFrames){
         video.play().catch(()=>{});
       }
     });
