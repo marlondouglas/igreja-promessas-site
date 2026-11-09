@@ -1,0 +1,19 @@
+Central de Transmissão — aplicativo de mesa
+
+Este programa abre a mesma página culto/studio.html do site, com o mesmo CSS e o mesmo JavaScript. Não é uma tela refeita. A logo do cabeçalho é a do HTML, /logo-promessas.svg.
+
+Dois cliques em PromessasStudio.exe. Não é preciso abrir o navegador nem subir um servidor Python. O exe escuta só em 127.0.0.1, numa porta a partir de 8097, e abre o Microsoft Edge em janela de aplicativo, sem barra de endereço. Se o Edge não estiver instalado, tenta o Chrome. O perfil fica em %LOCALAPPDATA%\IgrejaPromessas\PromessasStudio\edge e não mistura com o Edge do dia a dia. A senha continua sendo a do campo da página. Ela não é gravada por este exe.
+
+Teste sem abrir janela, sem câmera e sem rede:
+
+  PromessasStudio.exe --smoke-test
+
+--offline faz o mesmo. 0 = os arquivos do estúdio estão ao lado do exe. 4 = falta algum. 2 = na abertura de verdade, Edge e Chrome não foram encontrados. O teste mudo não devolve 2.
+
+Câmera, microfone e compartilhar tela usam as permissões do Edge, as mesmas do estúdio no Chrome. Este pacote não usa WebView2. Não altera o MediaMTX, não usa a porta 8080 e não publica sozinho: quem publica é o botão da página, no WHIP que ela já tem.
+
+O atraso de cerca de 20 s continua no player público, não neste exe. No iPhone ele só chega até a janela que o MediaMTX guarda.
+
+Falta no repositório o arquivo culto/assets/contagem-cinematica-licenca-igreja.mp4. A contagem da abertura pode ficar sem esse vídeo. Abertura, encerramento e arte final estão no pacote quando os mp4 couberem; se o zip vier sem eles, copie os dois R5 já usados no notebook para culto\assets\.
+
+O EstudioPromessas.exe nativo continua no repositório. Não rode os dois publicando /culto-aac ao mesmo tempo, nem junto com o supervisor.
