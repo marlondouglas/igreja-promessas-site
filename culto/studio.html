@@ -6,17 +6,18 @@
 <meta name="description" content="Estúdio de produção da Igreja Ministério Promessas. Prévia e ensaio de cultos com abertura, câmera e encerramento.">
 <title>Central de Transmissão | Igreja Promessas</title>
 <link rel="icon" href="/logo-promessas.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/culto/studio.css?v=1111-audiomonitorR5a">
-<script defer src="/culto/studio.js?v=1111-logo-noar1"></script>
-<script defer src="/culto/transmitir.js?v=1111-filmesR5a"></script>
+<link rel="stylesheet" href="/culto/studio.css?v=multi-notebook-1">
+<script defer src="/culto/studio.js?v=multi-notebook-1"></script>
+<script defer src="/culto/publish-config.js?v=multi-notebook-1"></script>
+<script defer src="/culto/transmitir.js?v=multi-notebook-1"></script>
 </head>
 <body class="studio-body">
 <header class="studio-header">
  <a class="studio-brand" href="/" aria-label="Site Igreja Promessas"><img src="/logo-promessas.svg" alt=""><span><strong>IGREJA PROMESSAS</strong><small>CENTRAL DE TRANSMISSÃO</small></span></a>
- <div class="header-right"><span class="status-live" id="studio-badge">● ENSAIO LOCAL</span><a class="outline-link" href="/culto/" target="_blank" rel="noopener">Página do público <span aria-hidden="true">↗</span></a></div>
+ <div class="header-right"><span class="status-live" id="studio-badge">● PRÉVIA</span><a class="outline-link" href="/culto/" target="_blank" rel="noopener">Página do público <span aria-hidden="true">↗</span></a></div>
 </header>
 <main class="studio-main">
- <div class="head-intro"><div><p class="kicker">PRODUÇÃO DE CULTOS <span aria-hidden="true">✦</span> MINISTÉRIO PROMESSAS</p><h1>Sua igreja. <em>Sua transmissão.</em></h1><p>Configure as cenas, confira o enquadramento e ensaie a abertura, o culto e o encerramento.</p></div><p class="honesty"><span>ℹ</span> <strong>SERVIDOR DO NOTEBOOK</strong> — o ensaio pode enviar vídeo real ao servidor local, com senha. A saída pública HTTPS já está configurada. Confirme o sinal no celular antes do culto oficial.</p></div>
+ <div class="head-intro"><div><p class="kicker">PRODUÇÃO DE CULTOS <span aria-hidden="true">✦</span> MINISTÉRIO PROMESSAS</p><h1>Sua igreja. <em>Sua transmissão.</em></h1><p>Configure as cenas, confira o enquadramento e ensaie a abertura, o culto e o encerramento.</p></div><p class="honesty"><span>ℹ</span> <strong>TRANSMITA DE OUTRO NOTEBOOK</strong> — abra este estúdio pelo endereço HTTPS do site e conecte ao servidor da igreja. Para transmitir pela internet, a entrada remota precisa estar configurada e o servidor deve permanecer ligado.</p></div>
  <div class="studio-grid">
   <div class="settings-column">
   <section class="settings card" aria-labelledby="settings-title">
@@ -44,20 +45,26 @@
       <label class="checkline share-microphone"><input id="screen-mic" type="checkbox"> Também usar o microfone enquanto compartilho a tela</label>
     </div>
     <button id="prepare-camera" class="camera-button" type="button">◉ Preparar câmera e microfone</button>
-    <p class="camera-note" id="camera-note" role="status">O navegador pedirá autorização apenas quando você preparar a câmera. Nada é enviado a um servidor.</p>
+    <p class="camera-note" id="camera-note" role="status">O navegador pedirá autorização quando você preparar a câmera. O vídeo só será enviado quando você habilitar e conectar a transmissão.</p>
   </section>
 
  <section class="card output-help" aria-labelledby="broadcast-title">
- <div class="card-top"><div><span class="eyebrow">04 · TRANSMISSÃO PELO NOTEBOOK</span><h2 id="broadcast-title">Servidor da Igreja Promessas</h2></div><span class="needs-connect" id="server-badge">TESTE LOCAL</span></div>
- <p><strong>O notebook envia o culto para a página pública da igreja por HTTPS.</strong> Marque o envio e informe a senha privada. Se a apresentação já estiver em andamento, clique em <strong>Conectar transmissão agora</strong>.</p>
- <div class="settings-line"><label class="checkline"><input id="publish-enabled" type="checkbox"><span>Enviar o vídeo composto ao servidor do notebook</span></label></div>
- <div class="publishing-row">
-  <div class="input-group"><label for="whip-url">Endereço WHIP do notebook</label><input id="whip-url" type="url" value="http://127.0.0.1:8889/culto/whip" spellcheck="false" autocomplete="off"><small>Endereço local para o teste no Chrome do notebook. A publicação sai pelo notebook e chega ao site público via túnel HTTPS já configurado.</small></div>
-  <div class="input-group smaller"><label for="publish-secret">Senha privada de transmissão</label><input id="publish-secret" type="password" placeholder="Senha em CHAVE-DO-ESTUDIO.txt" autocomplete="off"><small>Arquivo privado na pasta Igreja-Promessas-Live-Server do notebook. A senha não é salva no site.</small></div>
+ <div class="card-top"><div><span class="eyebrow">04 · PUBLICAR DE OUTRO NOTEBOOK</span><h2 id="broadcast-title">Conectar à igreja</h2></div><span class="needs-connect" id="server-badge">ENVIO DESATIVADO</span></div>
+ <p><strong>Use a câmera, o microfone ou a tela deste notebook.</strong> Escolha onde você está, confira o endereço do servidor e informe a senha privada. O servidor da igreja recebe o vídeo e precisa permanecer ligado durante o culto.</p>
+ <div class="publisher-location">
+  <label for="publish-location">De onde vou transmitir?</label>
+  <select id="publish-location" aria-describedby="publisher-guidance"><option value="remote" selected>Outro notebook pela internet</option><option value="local">Neste notebook servidor</option></select>
+  <p id="publisher-guidance" class="publisher-guidance">Em outro notebook, abra o estúdio pelo HTTPS do site e use o endereço HTTPS de entrada de vídeo fornecido pela igreja. A entrada remota precisa estar configurada no servidor; o endereço da página do público não substitui essa conexão.</p>
  </div>
- <div class="publishing-actions"><button id="test-server" type="button" class="link-button">Verificar servidor</button><button id="reconnect-publish" type="button" class="link-button">Conectar transmissão agora</button><a class="control secondary" href="http://127.0.0.1:8889/culto" target="_blank" rel="noopener noreferrer">Ver sinal local ↗</a><a class="control secondary" href="/culto/" target="_blank" rel="noopener">Ver página do público ↗</a></div>
- <p id="publish-status" role="status">Ensaio local: o envio ao notebook está desativado.</p>
- <p class="fineprint"><strong>Transmissão direta:</strong> o sinal do estúdio chega ao servidor local e é disponibilizado no site da igreja por HTTPS. O selo NO AR só confirma a conexão local; verifique a reprodução no celular usando internet móvel antes do culto oficial.</p>
+ <p id="publish-environment" class="publisher-environment" role="status">O navegador precisa permitir câmera, microfone e envio de vídeo.</p>
+ <div class="settings-line"><label class="checkline"><input id="publish-enabled" type="checkbox"><span>Enviar o vídeo para o servidor da igreja</span></label></div>
+ <div class="publishing-row">
+  <div class="input-group"><label for="whip-url">Endereço de entrada de vídeo (WHIP)</label><input id="whip-url" type="url" placeholder="https://servidor-da-igreja/culto/whip" spellcheck="false" autocomplete="off" aria-describedby="whip-url-help"><small id="whip-url-help">Use o endereço de publicação autorizado pela igreja. Não use 127.0.0.1 em outro notebook: ele aponta para o próprio computador.</small></div>
+  <div class="input-group smaller"><label for="publish-secret">Senha privada de transmissão</label><input id="publish-secret" type="password" placeholder="Informe a senha fornecida pela igreja" autocomplete="off" aria-describedby="publish-secret-help"><small id="publish-secret-help">Digite a senha somente neste campo. Ela não será salva no site nem incluída nos links.</small></div>
+ </div>
+ <div class="publishing-actions"><button id="test-server" type="button" class="link-button">Verificar servidor</button><button id="reconnect-publish" type="button" class="link-button">Conectar transmissão agora</button><a id="local-signal-link" class="control secondary" href="http://127.0.0.1:8889/culto" target="_blank" rel="noopener noreferrer" hidden>Ver sinal neste servidor ↗</a><a class="control secondary" href="/culto/" target="_blank" rel="noopener">Ver página do público ↗</a></div>
+ <p id="publish-status" role="status">Envio desativado. Prepare a imagem e confira a conexão antes de transmitir.</p>
+ <p class="fineprint"><strong>Confira o sinal do público:</strong> o selo de conexão confirma somente o envio ao servidor. Antes do culto oficial, abra a página do público em um celular usando internet móvel e confira imagem e áudio. Conectar outro notebook não transfere nem desliga automaticamente uma transmissão existente.</p>
 </section>
   </div>
   <section class="preview-column">
