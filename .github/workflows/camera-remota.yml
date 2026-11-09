@@ -24,7 +24,7 @@ jobs:
         with:
           gradle-version: "8.10.2"
       - name: Montar APK de depuração
-        run: gradle assembleDebug --no-daemon
+        run: chmod +x ./gradlew && ./gradlew assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: camera-remota-debug

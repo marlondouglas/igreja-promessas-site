@@ -42,9 +42,13 @@ typedef struct {
     int port;
     const char *key;
     int overlay;
+    int preview_pipe;
 } PublishSpec;
 
 int args_push(ArgList *list, const char *text);
+int args_replace(ArgList *list, int index, const char *text);
+int launch_is_smoke(const char *cmd);
+int launch_is_camera(const char *cmd);
 void args_free(ArgList *list);
 int args_contains(const ArgList *list, const char *text);
 char *args_join(const ArgList *list);

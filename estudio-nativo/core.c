@@ -19,6 +19,28 @@ void secure_wipe(void *ptr, size_t len) {
     for (i = 0; i < len; i++) p[i] = 0;
 }
 
+int launch_is_smoke(const char *cmd) {
+    if (!cmd) return 0;
+    return strstr(cmd, "--smoke-test") != NULL || strstr(cmd, "--offline") != NULL;
+}
+
+int launch_is_camera(const char *cmd) {
+    if (!cmd || launch_is_smoke(cmd)) return 0;
+    return strstr(cmd, "--camera") != NULL;
+}
+
+int args_replace(ArgList *list, int index, const char *text) {
+    char *copy;
+    if (!list || !text || index < 0 || index >= list->count || !list->items[index]) return 0;
+    copy = (char *)malloc(strlen(text) + 1);
+    if (!copy) return 0;
+    memcpy(copy, text, strlen(text) + 1);
+    secure_wipe(list->items[index], strlen(list->items[index]));
+    free(list->items[index]);
+    list->items[index] = copy;
+    return 1;
+}
+
 int args_push(ArgList *list, const char *text) {
     char *copy;
     char **next;
@@ -260,6 +282,21 @@ int publish_build(const PublishSpec *spec, ArgList *out, char *err, size_t err_c
         if (!spec->mic || !*spec->mic) {
             if (!args_push(out, "-f") || !args_push(out, "lavfi") || !args_push(out, "-i")
                 || !args_push(out, "anullsrc=r=48000:cl=stereo")) return 0;
+        }
+        if (spec->preview_pipe) {
+            const char *graph = "[0:v]split=2[main][prev];[main]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p[out];[prev]fps=12,scale=320:180,format=bgr24[p]";
+            const char *amap = (spec->mic && *spec->mic) ? "0:a" : "1:a";
+            if (!args_push(out, "-filter_complex") || !args_push(out, graph) || !args_push(out, "-map")
+                || !args_push(out, "[out]") || !args_push(out, "-map") || !args_push(out, amap)
+                || !push_encode(out) || !args_push(out, "-f") || !args_push(out, "flv") || !args_push(out, url_in)
+                || !args_push(out, "-map") || !args_push(out, "[p]") || !args_push(out, "-an")
+                || !args_push(out, "-c:v") || !args_push(out, "rawvideo") || !args_push(out, "-pix_fmt")
+                || !args_push(out, "bgr24") || !args_push(out, "-f") || !args_push(out, "rawvideo")
+                || !args_push(out, "pipe:1")) {
+                args_free(out);
+                return 0;
+            }
+            return 1;
         }
         if (!push_encode(out) || !args_push(out, "-f") || !args_push(out, "flv") || !args_push(out, url_in)) {
             args_free(out);
@@ -579,7 +616,8 @@ void card_compose(const CardDoc *draft, const CardLive *live, int now_ms, int ca
     }
     if (!on_air) return;
     *on_air = blank;
-    if (!live || (!live->active && now_ms - live->until_ms >= 450)) return;
+    if (!live || (!live->active && live->started_ms == 0 && live->until_ms == 0)) return;
+    if (!live->active && now_ms - live->until_ms >= 450) return;
     on_air->layer = live->active || now_ms < live->until_ms + 450 ? CARD_MESSAGE : CARD_SERVICE;
     if (!live->active && now_ms - live->until_ms >= 450) on_air->layer = CARD_SERVICE;
     if (live->doc.heading[0] || live->doc.message[0] || live->doc.banner[0]) {

@@ -135,6 +135,68 @@ int main(void) {
     joined = args_join(&args);
     expect(joined && strstr(joined, "\"video=Integrated Camera\"") != NULL, "nome da webcam com espaco");
     free(joined);
+    args_free(&args);
+    expect(launch_is_smoke("--smoke-test") && launch_is_smoke("--offline"), "teste sem transmissao");
+    expect(!launch_is_camera("--smoke-test --camera"), "teste nao abre a webcam");
+    expect(launch_is_camera("--camera") && !launch_is_smoke("--camera"), "modo camera separado");
+    spec.scene = SCENE_PUBLISH_PC;
+    spec.camera = "Webcam";
+    spec.mic = "Mic";
+    spec.host = "127.0.0.1";
+    spec.port = 1935;
+    spec.key = NULL;
+    spec.preview_pipe = 1;
+    expect(publish_build(&spec, &args, err, sizeof err), "previa durante o envio");
+    joined = args_join(&args);
+    expect(joined && strstr(joined, "pipe:1") && strstr(joined, "rtmp://127.0.0.1:1935/camera-pc")
+        && strstr(joined, "culto-aac") == NULL, "previa no mesmo ffmpeg sem a saida final");
+    free(joined);
+    args_free(&args);
+    {
+        CardDoc draft, loaded;
+        CardLive live;
+        CardView preview, on_air;
+        uint8_t *frame;
+        int dw = 0, dh = 0, rejected_card = 0;
+        float program = 0, music = 0, sting = 0;
+        card_doc_init(&draft);
+        snprintf(draft.heading, sizeof draft.heading, "Versiculo");
+        snprintf(draft.message, sizeof draft.message, "O Senhor e o meu pastor");
+        snprintf(draft.reference, sizeof draft.reference, "Salmo 23:1");
+        draft.seconds = 10;
+        draft.place = CARD_LOWER;
+        draft.banner_w = 1000;
+        draft.banner_h = 1000;
+        memset(&live, 0, sizeof live);
+        card_compose(&draft, &live, 0, 1280, 720, &preview, &on_air);
+        expect(preview.layer == CARD_MESSAGE && on_air.layer == CARD_SERVICE, "rascunho nao vai ao vivo");
+        expect(!card_duration_ok(0) && !card_duration_ok(601) && card_duration_ok(20), "duracao");
+        card_apply(&draft, &live, 1000);
+        card_compose(&draft, &live, 1000, 1280, 720, &preview, &on_air);
+        expect(live.active && on_air.layer == CARD_MESSAGE, "exibir publica o card");
+        draft.place = CARD_FULL;
+        card_compose(&draft, &live, 1200, 1280, 720, &preview, &on_air);
+        expect(preview.place == CARD_FULL && on_air.place == CARD_LOWER, "editar nao troca o que esta no ar");
+        card_compose(&draft, &live, 1000 + 10000, 1280, 720, NULL, &on_air);
+        expect(on_air.finished, "duracao pede retorno");
+        card_stop(&live, 1000 + 10000);
+        card_compose(&draft, &live, 1000 + 10000 + 500, 1280, 720, NULL, &on_air);
+        expect(on_air.layer == CARD_SERVICE, "volta a tarja depois da saida");
+        expect(banner_ratio(1000, 1000) == RATIO_SQUARE, "banner quadrado");
+        banner_contain(1000, 500, 200, 200, &dw, &dh);
+        expect(dw == 200 && dh == 100, "banner cabe sem esticar");
+        audio_gains(&on_air, 0, 0, &program, &music, &sting);
+        expect(program > 0.99f && music == 0.f, "musica desligada restaura o programa");
+        frame = (uint8_t *)calloc((size_t)1280 * 180 * 4, 1);
+        card_compose(&draft, &live, 0, 1280, 180, &preview, NULL);
+        render_card(frame, 1280, 180, &preview, &draft);
+        expect(frame[3] != 0, "texto do card pinta pixel");
+        free(frame);
+        expect(card_settings_write("card-test.ini", &draft), "grava card");
+        expect(card_settings_read("type=verse\nheading=A\nmessage=B\nreference=C\nseconds=20\nplace=1\nsound=0\nsenha=segredo\n", &loaded, &rejected_card), "le card");
+        expect(rejected_card && loaded.place == CARD_FULL && strcmp(loaded.heading, "A") == 0, "rejeita senha e aplica so no rascunho");
+        remove("card-test.ini");
+    }
 
     if (g_fail) {
         fprintf(stderr, "%d falhas\n", g_fail);

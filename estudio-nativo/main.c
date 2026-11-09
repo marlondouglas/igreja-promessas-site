@@ -25,6 +25,7 @@ static SceneKind g_scene_kind;
 static ULONGLONG g_scene_start;
 static int g_running;
 static int g_companion;
+static int g_smoke;
 static char g_host[64];
 static HANDLE g_err_rd;
 static HWND g_ip;
@@ -162,6 +163,27 @@ static void on_clear_key(void) {
     set_status(L"Senha removida deste computador.");
 }
 
+static void resolve_ffmpeg(char *out, size_t cap) {
+    wchar_t exe[MAX_PATH], dir[MAX_PATH], beside[MAX_PATH], found[MAX_PATH];
+    out[0] = 0;
+    GetModuleFileNameW(NULL, exe, MAX_PATH);
+    wcscpy(dir, exe);
+    if (wcsrchr(dir, L'\\')) *wcsrchr(dir, L'\\') = 0;
+    _snwprintf(beside, MAX_PATH, L"%s\\ffmpeg.exe", dir);
+    if (GetFileAttributesW(beside) != INVALID_FILE_ATTRIBUTES)
+        WideCharToMultiByte(CP_UTF8, 0, beside, -1, out, (int)cap, NULL, NULL);
+    else if (SearchPathW(NULL, L"ffmpeg.exe", NULL, MAX_PATH, found, NULL))
+        WideCharToMultiByte(CP_UTF8, 0, found, -1, out, (int)cap, NULL, NULL);
+    else snprintf(out, cap, "ffmpeg");
+}
+
+static void pin_ffmpeg(ArgList *args) {
+    char path[MAX_PATH * 3];
+    if (!args || args->count < 1) return;
+    resolve_ffmpeg(path, sizeof path);
+    args_replace(args, 0, path);
+}
+
 static void start_preview(void);
 
 static void refresh_devices(void) {
@@ -169,11 +191,16 @@ static void refresh_devices(void) {
     HANDLE rd = NULL, wr = NULL;
     STARTUPINFOW si;
     PROCESS_INFORMATION pi;
-    wchar_t cmd[] = L"ffmpeg -hide_banner -list_devices true -f dshow -i dummy";
+    wchar_t cmd[MAX_PATH * 3];
+    char ff[MAX_PATH * 3];
+    wchar_t wff[MAX_PATH * 3];
     char dump[8192];
     char video[8][160], audio[8][160];
     int nv = 0, na = 0, i, got = 0;
     DWORD n = 0;
+    resolve_ffmpeg(ff, sizeof ff);
+    MultiByteToWideChar(CP_UTF8, 0, ff, -1, wff, MAX_PATH * 3);
+    _snwprintf(cmd, sizeof cmd / sizeof cmd[0], L"\"%s\" -hide_banner -list_devices true -f dshow -i dummy", wff);
     CreatePipe(&rd, &wr, &sa, 0);
     SetHandleInformation(rd, HANDLE_FLAG_INHERIT, 0);
     ZeroMemory(&si, sizeof si);
@@ -183,7 +210,7 @@ static void refresh_devices(void) {
     si.hStdError = wr;
     si.hStdOutput = wr;
     if (!CreateProcessW(NULL, cmd, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
-        set_status(L"ffmpeg não encontrado. Instale o build GPL e deixe ffmpeg no PATH.");
+        set_status(L"ffmpeg não encontrado no PATH deste processo nem ao lado do exe.");
         CloseHandle(rd); CloseHandle(wr);
         return;
     }
@@ -303,6 +330,7 @@ static void start_preview(void) {
         args_free(&args);
         return;
     }
+    pin_ffmpeg(&args);
     joined = args_join(&args);
     args_free(&args);
     if (!joined || (size_t)MultiByteToWideChar(CP_UTF8, 0, joined, -1, cmd, 2048) == 0) {
@@ -392,7 +420,10 @@ static int start_scene(SceneKind scene) {
         spec.mic = g_mic_name;
         if (!g_companion && scene == SCENE_CAMERA && g_src_phone && SendMessageW(g_src_phone, BM_GETCHECK, 0, 0) == BST_CHECKED) spec.scene = SCENE_PULL_PHONE;
         if (!g_companion && scene == SCENE_CAMERA && g_src_pc && SendMessageW(g_src_pc, BM_GETCHECK, 0, 0) == BST_CHECKED) spec.scene = SCENE_PULL_PC;
-        if (g_companion) spec.scene = SCENE_PUBLISH_PC;
+        if (g_companion) {
+            spec.scene = SCENE_PUBLISH_PC;
+            spec.preview_pipe = 1;
+        }
         if (!publish_build(&spec, &args, err, sizeof err)) {
         wchar_t w[200];
         MultiByteToWideChar(CP_UTF8, 0, err, -1, w, 200);
@@ -400,6 +431,7 @@ static int start_scene(SceneKind scene) {
         if (g_companion) start_preview();
         return 0;
     }
+    pin_ffmpeg(&args);
     joined = args_join(&args);
     safe = redact_text(joined ? joined : "", key);
     log_line(safe ? safe : "ffmpeg");
@@ -420,22 +452,37 @@ static int start_scene(SceneKind scene) {
     si.wShowWindow = SW_HIDE;
     {
         SECURITY_ATTRIBUTES sa = {sizeof(sa), NULL, TRUE};
-        HANDLE wr = NULL;
+        HANDLE err_wr = NULL, out_wr = NULL, out_rd = NULL;
+        int split = g_companion && spec.preview_pipe;
+        int pipes_ok;
         if (g_err_rd) { CloseHandle(g_err_rd); g_err_rd = NULL; }
-        if (CreatePipe(&g_err_rd, &wr, &sa, 0)) {
-            SetHandleInformation(g_err_rd, HANDLE_FLAG_INHERIT, 0);
+        pipes_ok = CreatePipe(&g_err_rd, &err_wr, &sa, 0);
+        if (pipes_ok) SetHandleInformation(g_err_rd, HANDLE_FLAG_INHERIT, 0);
+        if (pipes_ok && split && !CreatePipe(&out_rd, &out_wr, &sa, 1024 * 1024)) split = 0;
+        if (out_rd) SetHandleInformation(out_rd, HANDLE_FLAG_INHERIT, 0);
+        if (pipes_ok) {
             si.dwFlags |= STARTF_USESTDHANDLES;
-            si.hStdError = wr;
-            si.hStdOutput = wr;
+            si.hStdError = err_wr;
+            si.hStdOutput = (split && out_wr) ? out_wr : err_wr;
         }
         if (!CreateProcessW(NULL, cmd, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
             secure_wipe(cmd, sizeof cmd);
-            if (wr) CloseHandle(wr);
-            set_status(L"Não iniciei o ffmpeg. Verifique se ele está no PATH.");
+            if (err_wr) CloseHandle(err_wr);
+            if (out_wr) CloseHandle(out_wr);
+            if (out_rd) CloseHandle(out_rd);
+            set_status(L"Não iniciei o ffmpeg. Verifique se ele está no PATH deste processo.");
             if (g_companion) start_preview();
             return 0;
         }
-        if (wr) CloseHandle(wr);
+        if (err_wr) CloseHandle(err_wr);
+        if (out_wr) CloseHandle(out_wr);
+        if (split && out_rd) {
+            ensure_frame();
+            g_prev_stop = 0;
+            g_prev_rd = out_rd;
+            g_prev_proc = NULL;
+            g_prev_thread = CreateThread(NULL, 0, preview_reader, NULL, 0, NULL);
+        } else if (out_rd) CloseHandle(out_rd);
     }
     secure_wipe(cmd, sizeof cmd);
     CloseHandle(pi.hThread);
@@ -514,7 +561,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             g_status = CreateWindowW(L"STATIC", L"Informe o IP do notebook. Neste mesmo PC use 127.0.0.1.", WS_CHILD | WS_VISIBLE, 24, 250, 320, 64, hwnd, NULL, NULL, NULL);
             g_log = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_READONLY | WS_VSCROLL, 24, 330, 770, 220, hwnd, (HMENU)ID_LOG, NULL, NULL);
             g_scene = g_status;
-            SetTimer(hwnd, ID_TIMER, 1000, NULL);
+            if (!g_smoke) SetTimer(hwnd, ID_TIMER, 1000, NULL);
             return 0;
         }
         g_title = CreateWindowW(L"EDIT", L"Culto da Família", WS_CHILD | WS_VISIBLE | WS_BORDER, 0, 0, 10, 10, hwnd, (HMENU)ID_TITLE, NULL, NULL);
@@ -545,7 +592,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         g_log = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | WS_VSCROLL, 0, 0, 10, 10, hwnd, (HMENU)ID_LOG, NULL, NULL);
         SendMessageW(g_fmt_h, BM_SETCHECK, BST_CHECKED, 0);
         SendMessageW(g_src_cam, BM_SETCHECK, BST_CHECKED, 0);
-        SetTimer(hwnd, ID_TIMER, 1000, NULL);
+        if (!g_smoke) SetTimer(hwnd, ID_TIMER, 1000, NULL);
         return 0;
     case WM_SIZE: {
         int w = LOWORD(lp), h = HIWORD(lp);
@@ -682,12 +729,42 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     }
 }
 
+static int smoke_check(void) {
+    wchar_t exe[MAX_PATH], dir[MAX_PATH], path[MAX_PATH], found[MAX_PATH];
+    const wchar_t *names[3] = {
+        L"abertura-promessas-300s-R5.mp4",
+        L"encerramento-promessas-120s-R5.mp4",
+        L"tela-final-promessas-R5.png"
+    };
+    int i, code = 0;
+    if (!g_win) return 1;
+    if (!SearchPathW(NULL, L"ffmpeg.exe", NULL, MAX_PATH, found, NULL)) {
+        GetModuleFileNameW(NULL, exe, MAX_PATH);
+        wcscpy(dir, exe);
+        if (wcsrchr(dir, L'\\')) *wcsrchr(dir, L'\\') = 0;
+        _snwprintf(path, MAX_PATH, L"%s\\ffmpeg.exe", dir);
+        if (GetFileAttributesW(path) == INVALID_FILE_ATTRIBUTES) code |= 2;
+    }
+    GetModuleFileNameW(NULL, exe, MAX_PATH);
+    wcscpy(dir, exe);
+    if (wcsrchr(dir, L'\\')) *wcsrchr(dir, L'\\') = 0;
+    for (i = 0; i < 3; i++) {
+        _snwprintf(path, MAX_PATH, L"%s\\%s", dir, names[i]);
+        if (GetFileAttributesW(path) == INVALID_FILE_ATTRIBUTES) code |= 4;
+    }
+    return code;
+}
+
 int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, wchar_t *cmd, int show) {
     WNDCLASSW wc;
     MSG msg;
+    char narrow[512];
     (void)prev;
-    g_companion = cmd && wcsstr(cmd, L"--camera") != NULL;
-    key_file();
+    WideCharToMultiByte(CP_UTF8, 0, cmd ? cmd : L"", -1, narrow, 512, NULL, NULL);
+    g_smoke = launch_is_smoke(narrow);
+    g_companion = launch_is_camera(narrow);
+    secure_wipe(narrow, sizeof narrow);
+    if (!g_smoke) key_file();
     ZeroMemory(&wc, sizeof wc);
     wc.lpfnWndProc = WndProc;
     wc.hInstance = inst;
@@ -696,8 +773,13 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, wchar_t *cmd, int show) {
     wc.lpszClassName = L"EstudioPromessas";
     RegisterClassW(&wc);
     g_win = CreateWindowExW(0, L"EstudioPromessas",
-        g_companion ? L"Igreja Promessas — Câmera deste PC" : L"Igreja Promessas — Central de Transmissão",
-        WS_OVERLAPPEDWINDOW | WS_VISIBLE, 40, 30, g_companion ? 860 : 1280, g_companion ? 640 : 820, NULL, NULL, inst, NULL);
+        g_smoke ? L"Igreja Promessas — teste" : (g_companion ? L"Igreja Promessas — Câmera deste PC" : L"Igreja Promessas — Central de Transmissão"),
+        WS_OVERLAPPEDWINDOW | (g_smoke ? 0 : WS_VISIBLE), 40, 30, g_companion ? 860 : 1280, g_companion ? 640 : 820, NULL, NULL, inst, NULL);
+    if (g_smoke) {
+        int code = smoke_check();
+        if (g_win) DestroyWindow(g_win);
+        return code;
+    }
     load_key();
     if (!g_companion) load_assets();
     refresh_devices();

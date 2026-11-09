@@ -2,6 +2,31 @@
 
 Programa Windows em Win32. Não é página web, Electron nem WebView. A captura usa DirectShow e a área de trabalho pelo ffmpeg (`dshow` e `gdigrab`). A saída é H.264 Baseline + AAC-LC para `rtsp://127.0.0.1:8554/culto-aac`. O estúdio do navegador e o relay continuam no repositório, sem serem substituídos.
 
+## Arranque
+
+Sem argumento, abrir o exe **não publica** e **não liga a câmera**. Faz só isto:
+
+- cria a pasta `%LOCALAPPDATA%\IgrejaPromessas\Estudio` se ela não existir;
+- se `stream-key.bin` já existir, lê a senha com DPAPI para a memória; se o arquivo estiver ilegível, apaga esse arquivo;
+- confere se os três arquivos de mídia estão ao lado do exe;
+- executa `ffmpeg -list_devices true -f dshow -i dummy` para listar câmera e microfone. Isso não envia nada ao MediaMTX. Pode tocar o dispositivo só para enumerar.
+
+A transmissão de `/culto-aac` só começa no botão **Iniciar apresentação** ou **Conectar transmissão agora**. Enquanto o supervisor 15984 for o publicador de `/culto-aac`, não aperte esses botões.
+
+`--camera` é outro modo. Ao abrir, além da lista, mostra a prévia da webcam. O envio para `camera-pc` só começa em **Iniciar envio**. Durante o envio a prévia continua no mesmo ffmpeg. Não consulta `/culto-aac`.
+
+`--smoke-test` e `--offline` são o mesmo teste. Criam a janela oculta, procuram `ffmpeg.exe` ao lado do exe ou no PATH **deste processo**, conferem os três arquivos e saem. Não criam pasta, não leem nem apagam senha, não abrem câmera, microfone nem rede. O programa não altera o PATH do Windows.
+
+Código de saída: `0` pronto; `1` a janela não abriu; `2` sem ffmpeg neste processo; `4` falta um arquivo de mídia. Os bits somam.
+
+```
+$env:PATH = "C:\caminho\do\ffmpeg9;" + $env:PATH
+.\EstudioPromessas.exe --smoke-test
+echo $LASTEXITCODE
+```
+
+Não use o exe antigo da pasta `teste-estudio-nativo-20261108-205731` para esse teste: ele não tem esta opção. Ao abrir, aquele arquivo cria a pasta da senha, pode apagar um `stream-key.bin` ilegível e lista os dispositivos.
+
 Este executável foi compilado neste ambiente Linux com mingw. Não foi aberto no Windows. Não há teste de câmera, DPAPI real, nem iPhone a partir daqui.
 
 ## O que a tela repete do estúdio atual
@@ -42,6 +67,6 @@ O celular publica em `rtmp://IP-DO-NOTEBOOK:1935/camera-remota`. Outro PC, ou es
 
 O IP não vem preenchido. Neste notebook, digite `127.0.0.1`. Em outro aparelho, use o IP que o Windows mostrar na rede. A configuração do MediaMTX não foi alterada. Se o servidor recusar o caminho novo, o aviso aparece no programa; não se abre autenticação nem firewall daqui.
 
-Modo câmera deste PC: `EstudioPromessas.exe --camera`. A prévia usa a mesma webcam pelo DirectShow e pausa enquanto o envio ocupa o aparelho. O estado “Conectado” só aparece quando o ffmpeg informa quadro ou saída. Esse modo não consulta `/culto-aac`, para não parecer que substituiu a transmissão atual. Recusa e senha errada aparecem como falha.
+Modo câmera deste PC: `EstudioPromessas.exe --camera`. A prévia sai do mesmo ffmpeg que publica em `camera-pc`, também enquanto envia. O estado “Conectado” só aparece quando o ffmpeg informa quadro ou saída. Esse modo não consulta `/culto-aac`. Recusa e senha errada aparecem como falha. O ffmpeg é procurado ao lado do exe e depois no PATH deste processo. O programa não grava PATH no sistema.
 
 O app Android está em `camera-remota`. O comando é `gradle assembleDebug`. O APK desta máquina depende do Android SDK; o workflow `.github/workflows/camera-remota.yml` tenta o mesmo comando. Não foi instalado em telefone.
