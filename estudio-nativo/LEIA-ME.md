@@ -7,7 +7,7 @@ Programa Windows em Win32. Não é página web, Electron nem WebView. A captura 
 Sem argumento, abrir o exe **não publica** e **não liga a câmera**. Faz só isto:
 
 - cria a pasta `%LOCALAPPDATA%\IgrejaPromessas\Estudio` se ela não existir;
-- se `stream-key.bin` já existir, lê a senha com DPAPI para a memória; se o arquivo estiver ilegível, apaga esse arquivo;
+- se `stream-key.bin` já existir, lê a senha com DPAPI para a memória; se o arquivo estiver ilegível, ele permanece no disco e o programa avisa. Só **Limpar senha salva** apaga;
 - confere se os três arquivos de mídia estão ao lado do exe;
 - executa `ffmpeg -list_devices true -f dshow -i dummy` para listar câmera e microfone. Isso não envia nada ao MediaMTX. Pode tocar o dispositivo só para enumerar.
 
@@ -15,7 +15,9 @@ A transmissão de `/culto-aac` só começa no botão **Iniciar apresentação** 
 
 `--camera` é outro modo. Ao abrir, além da lista, mostra a prévia da webcam. O envio para `camera-pc` só começa em **Iniciar envio**. Durante o envio a prévia continua no mesmo ffmpeg. Não consulta `/culto-aac`.
 
-`--smoke-test` e `--offline` são o mesmo teste. Criam a janela oculta, procuram `ffmpeg.exe` ao lado do exe ou no PATH **deste processo**, conferem os três arquivos e saem. Não criam pasta, não leem nem apagam senha, não abrem câmera, microfone nem rede. O programa não altera o PATH do Windows.
+`--smoke-test` e `--offline` são o mesmo teste. Criam a janela oculta, procuram `ffmpeg.exe` ao lado do exe ou no PATH **deste processo**, conferem os três arquivos e saem. Não criam pasta, não leem nem apagam senha, não abrem câmera, microfone nem rede. O programa não altera o PATH do Windows. O código de saída não mudou.
+
+`DejaVuSans.ttf` fica ao lado do exe. A logo desenhada no quadro é o traçado de `logo-promessas.svg`, em branco. A prévia à direita é o rascunho; **Exibir mensagem** é o que entra no ffmpeg, junto com a câmera, a tela ou a câmera remota. A música escolhida só soa durante a mensagem e o volume do culto volta quando ela encerra. Isso não foi visto numa webcam. O atraso de 20 s continua sendo o do player; este exe não segura 20 s por conta própria.
 
 Código de saída: `0` pronto; `1` a janela não abriu; `2` sem ffmpeg neste processo; `4` falta um arquivo de mídia. Os bits somam.
 

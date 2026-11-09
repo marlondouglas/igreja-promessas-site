@@ -7,13 +7,13 @@ CFLAGS ?= -Wall -Wextra -O2
 test: test_core
 	./test_core
 
-test_core: test_core.c core.c core.h
-	$(CC) $(CFLAGS) -o test_core test_core.c core.c
+test_core: test_core.c core.c paint.c core.h paint.h
+	$(CC) $(CFLAGS) -o test_core test_core.c core.c paint.c -lm
 
 win: EstudioPromessas.exe
 
 EstudioPromessas.exe: main.c core.c core.h
-	$(MINGW) $(CFLAGS) -municode -mwindows -o EstudioPromessas.exe main.c core.c -lwinhttp -lcrypt32 -luser32 -lgdi32 -lcomctl32 -lshell32
+	$(MINGW) $(CFLAGS) -municode -mwindows -o EstudioPromessas.exe main.c core.c paint.c -lwinhttp -lcrypt32 -luser32 -lgdi32 -lcomctl32 -lshell32 -lcomdlg32 -lm
 
 clean:
 	rm -f test_core EstudioPromessas.exe estudio-key-test.bin

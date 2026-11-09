@@ -1,4 +1,5 @@
 #include "core.h"
+#include "paint.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -196,6 +197,98 @@ int main(void) {
         expect(card_settings_read("type=verse\nheading=A\nmessage=B\nreference=C\nseconds=20\nplace=1\nsound=0\nsenha=segredo\n", &loaded, &rejected_card), "le card");
         expect(rejected_card && loaded.place == CARD_FULL && strcmp(loaded.heading, "A") == 0, "rejeita senha e aplica so no rascunho");
         remove("card-test.ini");
+    }
+    {
+        static const unsigned char png[] = {137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,8,0,0,0,4,8,2,0,0,0,60,175,233,167,0,0,0,17,73,68,65,84,120,156,99,184,35,167,129,21,49,80,79,2,0,43,205,36,65,94,245,33,121,0,0,0,0,73,69,78,68,174,66,96,130};
+        Paint *paint = paint_open("DejaVuSans.ttf");
+        CardDoc draft;
+        CardLive live;
+        CardView preview, on_air;
+        uint8_t *shown, *staged;
+        int lw = 0, lh = 0, x, y, hits = 0, holes = 0, red_preview = 0, red_live = 0, ink = 0;
+        int16_t program[8], music[8], mixed[8], restored[8];
+        FILE *wav, *pngf;
+        expect(paint && paint_font_ok(paint), "fonte DejaVu abre");
+        expect(paint_logo_size(paint, &lw, &lh) && lw == 240 && lh == 240, "logo raster");
+        for (y = 0; y < lh; y += 3) for (x = 0; x < lw; x += 3) {
+            if (paint_logo_hit(paint, x, y)) hits++; else holes++;
+        }
+        expect(hits > 200 && holes > 200, "logo original tem miolo e claro");
+        card_doc_init(&draft);
+        snprintf(draft.heading, sizeof draft.heading, "RASCUNHO");
+        snprintf(draft.message, sizeof draft.message, "Texto que ainda nao foi exibido");
+        snprintf(draft.reference, sizeof draft.reference, "Salmo 23:1");
+        draft.banner_w = 8; draft.banner_h = 4; draft.place = CARD_LOWER; draft.seconds = 10;
+        memset(&live, 0, sizeof live);
+        card_compose(&draft, &live, 0, 1280, 720, &preview, &on_air);
+        pngf = fopen("banner-test.png", "wb");
+        expect(pngf != NULL, "grava png");
+        if (pngf) { fwrite(png, 1, sizeof png, pngf); fclose(pngf); }
+        expect(paint_load_banner(paint, "banner-test.png"), "decodifica o banner");
+        shown = (uint8_t *)calloc((size_t)1280 * 720 * 4, 1);
+        staged = (uint8_t *)calloc((size_t)1280 * 720 * 4, 1);
+        paint_frame(paint, staged, 1280, 720, &preview, &draft, "Culto da Familia", 1000, 0, 0);
+        paint_frame(paint, shown, 1280, 720, &on_air, &live.doc, "Culto da Familia", 1000, 0, 1);
+        for (y = 0; y < 720; y++) for (x = 0; x < 1280; x++) {
+            uint8_t *sp = staged + ((size_t)y * 1280 + (size_t)x) * 4;
+            uint8_t *op = shown + ((size_t)y * 1280 + (size_t)x) * 4;
+            if (sp[2] > 180 && sp[1] < 80 && sp[0] < 80) red_preview++;
+            if (op[2] > 180 && op[1] < 80 && op[0] < 80) red_live++;
+            if (sp[3] > 40) ink++;
+        }
+        expect(red_preview > 20, "banner real aparece na previa");
+        expect(red_live == 0, "banner do rascunho nao entra no quadro ao vivo");
+        expect(ink > 500, "texto da previa tem pixels de fonte");
+        expect(memcmp(staged, shown, (size_t)1280 * 720 * 4) != 0, "previa e ao vivo sao quadros diferentes");
+        expect(shown[(14 * 1280 + (1280 - 90)) * 4 + 3] > 0, "selo NO AR no quadro publicado");
+        for (x = 0; x < 8; x++) { program[x] = 1000; music[x] = 8000; }
+        mix_stereo(mixed, program, music, 4, 0.45f, 0.35f, NULL, 0);
+        mix_stereo(restored, program, music, 4, 1.f, 0.f, NULL, 0);
+        expect(mixed[0] == 3250 && restored[0] == 1000, "mix abaixa e restaura a amostra");
+        wav = fopen("mix-test.wav", "wb");
+        expect(wav != NULL, "abre wav");
+        if (wav) {
+            int16_t readback[16];
+            int16_t *chord = (int16_t *)calloc(12000, sizeof(int16_t));
+            sting_fill(chord, 6000, 8000);
+            {
+                int peak = 0, si;
+                for (si = 0; si < 6000; si++) {
+                    int a = chord[si * 2];
+                    if (a < 0) a = -a;
+                    if (a > peak) peak = a;
+                }
+                expect(chord && chord[0] == 0 && peak > 400, "acorde da transicao tem ataque");
+            }
+            expect(chord[5900 * 2] > -80 && chord[5900 * 2] < 80, "acorde termina");
+            free(chord);
+            unsigned char hdr[44] = {0};
+            memcpy(hdr, "RIFF", 4); memcpy(hdr + 8, "WAVEfmt ", 8); memcpy(hdr + 36, "data", 4);
+            hdr[4] = 36 + 16; hdr[16] = 16; hdr[20] = 1; hdr[22] = 2; hdr[24] = 0x80; hdr[25] = 0x3e;
+            hdr[32] = 4; hdr[34] = 16; hdr[40] = 16;
+            fwrite(hdr, 1, 44, wav);
+            fwrite(mixed, 2, 8, wav);
+            fwrite(restored, 2, 8, wav);
+            fclose(wav);
+            wav = fopen("mix-test.wav", "rb");
+            fseek(wav, 44, SEEK_SET);
+            expect(fread(readback, 2, 16, wav) == 16 && readback[0] == 3250 && readback[8] == 1000, "wav guarda o duck e a volta");
+            fclose(wav);
+        }
+        remove("banner-test.png");
+        remove("mix-test.wav");
+        free(shown); free(staged);
+        paint_close(paint);
+        spec.scene = SCENE_PULL_PC;
+        spec.compose = 1;
+        spec.overlay_path = "\\\\.\\pipe\\EstudioPromessasOv";
+        spec.key = NULL;
+        expect(publish_build(&spec, &args, err, sizeof err), "compoe camera do pc");
+        joined = args_join(&args);
+        expect(joined && strstr(joined, "camera-pc") && strstr(joined, "/culto-aac") && strstr(joined, "overlay")
+            && strstr(joined, "pipe:0") && strstr(joined, "-c copy") == NULL, "remoto entra composto, nao cru");
+        free(joined);
+        args_free(&args);
     }
 
     if (g_fail) {

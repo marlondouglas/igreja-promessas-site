@@ -43,6 +43,8 @@ typedef struct {
     const char *key;
     int overlay;
     int preview_pipe;
+    int compose;
+    const char *overlay_path;
 } PublishSpec;
 
 int args_push(ArgList *list, const char *text);

@@ -175,6 +175,24 @@ static int push_tail(ArgList *out, const char *url) {
         && args_push(out, "tcp") && args_push(out, url);
 }
 
+static int push_compose_tail(ArgList *out, const PublishSpec *spec, const char *url) {
+    static const char *graph =
+        "[0:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p[b];"
+        "[1:v]format=bgra[o];[b][o]overlay=0:0:format=auto,format=yuv420p[v]";
+    if (!spec->overlay_path || !spec->overlay_path[0]) return 0;
+    if (!args_push(out, "-f") || !args_push(out, "rawvideo") || !args_push(out, "-pixel_format")
+        || !args_push(out, "bgra") || !args_push(out, "-video_size") || !args_push(out, "1280x720")
+        || !args_push(out, "-framerate") || !args_push(out, "12") || !args_push(out, "-i")
+        || !args_push(out, spec->overlay_path)) return 0;
+    if (!args_push(out, "-f") || !args_push(out, "s16le") || !args_push(out, "-ar")
+        || !args_push(out, "48000") || !args_push(out, "-ac") || !args_push(out, "2")
+        || !args_push(out, "-i") || !args_push(out, "pipe:0")) return 0;
+    if (!args_push(out, "-filter_complex") || !args_push(out, graph) || !args_push(out, "-map")
+        || !args_push(out, "[v]") || !args_push(out, "-map") || !args_push(out, "2:a")) return 0;
+    if (!push_encode(out)) return 0;
+    return push_tail(out, url);
+}
+
 int publish_build(const PublishSpec *spec, ArgList *out, char *err, size_t err_cap) {
     char url[768];
     char duration[16];
@@ -187,7 +205,8 @@ int publish_build(const PublishSpec *spec, ArgList *out, char *err, size_t err_c
         return 0;
     }
     if (!args_push(out, "ffmpeg") || !args_push(out, "-hide_banner") || !args_push(out, "-loglevel")
-        || !args_push(out, "warning") || !args_push(out, "-nostdin")) return 0;
+        || !args_push(out, "warning")) return 0;
+    if (!spec->compose && !args_push(out, "-nostdin")) return 0;
     if (spec->scene == SCENE_COUNTDOWN) {
         snprintf(duration, sizeof duration, "%d", ESTUDIO_COUNTDOWN_SEC);
         if (!args_push(out, "-re") || !args_push(out, "-f") || !args_push(out, "lavfi")
@@ -226,11 +245,16 @@ int publish_build(const PublishSpec *spec, ArgList *out, char *err, size_t err_c
             args_free(out);
             return 0;
         }
-        if (spec->mic && *spec->mic) snprintf(input, sizeof input, "video=%s:audio=%s", spec->camera, spec->mic);
+        if (spec->compose) snprintf(input, sizeof input, "video=%s", spec->camera);
+        else if (spec->mic && *spec->mic) snprintf(input, sizeof input, "video=%s:audio=%s", spec->camera, spec->mic);
         else snprintf(input, sizeof input, "video=%s", spec->camera);
         if (!args_push(out, "-f") || !args_push(out, "dshow") || !args_push(out, "-rtbufsize")
             || !args_push(out, "100M") || !args_push(out, "-framerate") || !args_push(out, "24")
             || !args_push(out, "-i") || !args_push(out, input)) return 0;
+        if (spec->compose) {
+            if (!push_compose_tail(out, spec, url)) { args_free(out); return 0; }
+            return 1;
+        }
         if (!spec->mic || !*spec->mic) {
             if (!args_push(out, "-f") || !args_push(out, "lavfi") || !args_push(out, "-i")
                 || !args_push(out, "anullsrc=r=48000:cl=stereo")) return 0;
@@ -243,6 +267,10 @@ int publish_build(const PublishSpec *spec, ArgList *out, char *err, size_t err_c
     } else if (spec->scene == SCENE_SCREEN) {
         if (!args_push(out, "-f") || !args_push(out, "gdigrab") || !args_push(out, "-framerate")
             || !args_push(out, "24") || !args_push(out, "-i") || !args_push(out, "desktop")) return 0;
+        if (spec->compose) {
+            if (!push_compose_tail(out, spec, url)) { args_free(out); return 0; }
+            return 1;
+        }
         if (spec->mic && *spec->mic) {
             char input[300];
             snprintf(input, sizeof input, "audio=%s", spec->mic);
@@ -258,8 +286,13 @@ int publish_build(const PublishSpec *spec, ArgList *out, char *err, size_t err_c
         char pull[256];
         const char *path = spec->scene == SCENE_PULL_PHONE ? ESTUDIO_PATH_PHONE : ESTUDIO_PATH_PC;
         snprintf(pull, sizeof pull, "rtsp://127.0.0.1:8554/%s", path);
-        if (!args_push(out, "-rtsp_transport") || !args_push(out, "tcp") || !args_push(out, "-i") || !args_push(out, pull)
-            || !args_push(out, "-vf")
+        if (!args_push(out, "-rtsp_transport") || !args_push(out, "tcp") || !args_push(out, "-i") || !args_push(out, pull))
+            return 0;
+        if (spec->compose) {
+            if (!push_compose_tail(out, spec, url)) { args_free(out); return 0; }
+            return 1;
+        }
+        if (!args_push(out, "-vf")
             || !args_push(out, "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p"))
             return 0;
     } else if (spec->scene == SCENE_PUBLISH_PC) {

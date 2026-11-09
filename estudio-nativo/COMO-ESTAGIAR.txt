@@ -23,6 +23,9 @@ O mesmo vale para --offline. Saída:
 Não muda o PATH do Windows. Não fala com /culto-aac. O supervisor 15984
 pode continuar publicando /culto-aac durante esse teste.
 
+Deixe DejaVuSans.ttf ao lado do exe. Sem ele o texto do card não desenha.
+O teste mudo não abre card, música nem câmera. Não apaga stream-key.bin.
+
 Um só publicador de /culto-aac
 
 Não aperte Iniciar apresentação nem Conectar transmissão agora enquanto
